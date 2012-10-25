@@ -231,7 +231,7 @@
 (defun comp-begin (exps env val? more?)
   "Compile a sequence of expressions,
   returning the last one as the value."
-  (cond ((null exps) (comp-const nil val? more?))
+  (cond ((null exps) (comp-const *false* val? more?))
         ((length=1 exps) (comp (first exps) env val? more?))
         (t (seq (comp (first exps) env nil t)
                 (comp-begin (rest exps) env val? more?)))))

@@ -93,6 +93,11 @@
        (not (symbol? #t))
        (not (symbol? #f))))
 
+(define (syntax-test-begin)
+  (and (eq? #f (begin))
+       (eqv? 1 (begin 1))
+       (eqv? 2 (begin 1 2))))
+
 (define (boolean-tests)
   (write (list (boolean-values-test)
 	       (if-test-01)
@@ -108,6 +113,10 @@
 	       ))
   (newline))
 
+(define (syntax-tests)
+  (write (list (syntax-test-begin))))
+
 (define (all-tests)
   (boolean-tests)
-  (type-predicate-tests))
+  (type-predicate-tests)
+  (syntax-tests))
