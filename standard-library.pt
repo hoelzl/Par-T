@@ -2,7 +2,9 @@
 
 ;;; Define this when we have a better continuation handling.
 (define (error . args)
-  (write args))
+  (write args)
+  (newline)
+  args)
 
 (define else #t)
 
@@ -82,6 +84,3 @@
 	       (set! choice-points
 		     (append new-cps choice-points)))
 	     (fail))))
-
-
-      

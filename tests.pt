@@ -24,6 +24,20 @@
     (newline)
     (my-cont '(foo))))
 
+(define (call/cc-test-05)
+  (let ((my-cont '()))
+    (write
+     (cons 1 (call/cc (lambda (cc)
+			(set! my-cont
+			      (lambda (x)
+				(set! my-cont (lambda (y)
+						(write (cons 'done y))
+						(newline)))
+				(cc x)))
+			(cons 2 (cc '(3)))))))
+    (newline)
+    (my-cont '(foo))))
+
 (define (call/cc-tests)
   (write (call/cc-test-01))
   (newline)
@@ -32,6 +46,8 @@
   (write (call/cc-test-03))
   (newline)
   (write (call/cc-test-04))
+  (newline)
+  (write (call/cc-test-05))
   (newline))
 
 (define (boolean-values-test)

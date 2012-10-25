@@ -187,13 +187,16 @@
 ;;; This could also be done by defining PRINT-OBJECT methods
 ;;; (potentially by intorducing structs for true and false values).
 (defun display (x)
-  (princ x))
+  (princ x)
+  x)
 
 (defun par-t-write (x)
-  (write x))
+  (write x)
+  x)
 
 (defun newline ()
-  (terpri))
+  (terpri)
+  *false*)
 
 
 (defparameter *primitive-fns*
