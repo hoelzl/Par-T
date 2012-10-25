@@ -651,6 +651,8 @@
     (load-par-t-file filename)))
 
 (defun load-par-t-tests ()
+  (init-par-t-comp)
+  (load-par-t-standard-library)
   (let ((filename (par-t-system-file "tests")))
     (load-par-t-file filename)))
 

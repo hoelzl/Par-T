@@ -60,8 +60,46 @@
 (defun cdr-setter (new-value cons)
   (setf (cdr cons) new-value))
 
+(defun booleanp (obj)
+  (or (eq obj nil)
+      (eq obj t)))
+
+(defstruct pt-object
+  class
+  slots)
+
+(defun %allocate-instance (class n-slots)
+  (make-pt-object :class class
+		  :slots (make-array n-slots)))
+
+(defstruct (pt-entity (:include pt-object))
+  proc)
+
+(defun %allocate-entity (class n-slots)
+  (make-pt-entity :class class
+		  :slots (make-array n-slots)))
+
+(defun %instance-class (obj)
+  (pt-object-class obj))
+
+(defun %instance-proc (obj)
+  (pt-entity-proc obj))
+
+(defun %instance-proc-setter (new-proc obj)
+  (setf (pt-entity-proc obj) new-proc))
+
+(defun %instancep (obj)
+  (pt-object-p obj))
+
+(defun %instance-ref (obj index)
+  (svref (pt-object-slots obj) index))
+
+(defun %instance-setter (new-value obj index)
+  (setf (svref (pt-object-slots obj) index) new-value))
+
 (defparameter *primitive-fns*
-  '((+ 2 + true nil)
+  '(;; Arithmetic and numerical comparisons
+    (+ 2 + true nil)
     (- 2 - true nil)
     (* 2 * true nil)
     (/ 2 / true nil)
@@ -71,11 +109,26 @@
     (>= 2 >= nil nil)
     (/= 2 /= nil nil)
     (= 2 = nil nil)
+
+    ;; General comparisons and logical functions
     (eq? 2 eq nil nil)
     (eqv? 2 eql nil nil)
     (equal? 2 equal nil nil)
     (not 1 not nil nil)
+
+    ;; Type predicates
     (null? 1 not nil nil)
+    (pair? 1 consp nil nil)
+    (boolean? 1 booleanp nil nil)
+    (symbol? 1 symbolp nil nil)
+    ;; Maybe this should include entities as well?
+    (procedure? 1 fn-p nil nil)
+    (number? 1 numberp nil nil)
+    (vector? 1 vectorp nil nil)
+    (char? 1 characterp nil nil)
+    (string? 1 stringp nil nil)
+    
+    ;; Primitives for lists
     (cons 2 cons true nil)
     (car 1 car nil nil)
     (car-setter! 2 car-setter nil nil)
@@ -85,11 +138,25 @@
     (list 1 list1 true nil)
     (list 2 list2 true nil)
     (list 3 list3 true nil)
+
+    ;; Instance handling for the object system
+    (%allocate-instance 2 %allocate-instance true nil)
+    (%allocate-entity 2 %allocate-entity true nil)
+    (%instance-class 1 %instance-class nil nil)
+    (%instance-proc 1 %instance-proc nil nil)
+    (%instance? 1 %instancep nil nil)
+    (%instance-ref 2 %instance-ref nil nil)
+    (%instance-setter 3 %instance-setter nil t)
+    (%instance-proc-setter 3 %instance-proc-setter nil t)
+
+    ;; Reading and writing
     (read 0 par-t-read nil t)
     (eof-object? 1 eof-object? nil nil)
     (write 1 write nil t)
     (display 1 display nil t)
     (newline 0 newline nil t)
+
+    ;; Misc stuff
     (compiler 1 compiler t nil) 
     (name! 2 name! true t)
     (random 1 random true nil)))

@@ -24,6 +24,21 @@
     (newline)
     (my-cont '(foo))))
 
+(define (type-predicate-test-pair)
+  (and (pair? '(1 2))
+       (not (pair? #f))
+       (not (pair? 1))))
+
+(define (type-predicate-test-null)
+  (and (null? '())
+       (not (null? #f))
+       (not (null? '(1 2)))
+       (not (null? 1))))
+
+(define (type-predicate-tests)
+  (list (type-predicate-test-pair)
+	(type-predicate-test-null)))
+
 (define (all-tests)
   (write (call/cc-test-01))
   (newline)
@@ -32,4 +47,5 @@
   (write (call/cc-test-03))
   (newline)
   (write (call/cc-test-04))
-  (newline))
+  (newline)
+  (type-predicate-tests))

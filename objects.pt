@@ -1,0 +1,18 @@
+(herald "The Par-T object system")
+
+(define (class-of x)
+  (cond ((%instance? x)   (%instance-class x))
+	((pair? x)        <pair>)
+	((null? x)        <null>)
+	((boolean? x)     <boolean>)
+	((symbol? x)      <symbol>)
+	((procedure? x)   <procedure>)
+	((number? x)      <number>)
+	((vector? x)      <vector>)
+	((char? x)        <char>)
+	((string? x)      <string>)
+	((input-port? x)  <input-port>)
+	((output-port? x) <output-port>)
+	))
+
+

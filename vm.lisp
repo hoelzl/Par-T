@@ -119,9 +119,15 @@
 			env (fn-env f)
 			pc 0
 			n-args (arg1 instr)))
-		 ;; Tried to call something other than a function
-		 ;; structure.  This is the place where support for
-		 ;; callable instances (aka entities) should go.
+		 ((pt-entity-p f)
+		  (let ((fun (%instance-proc f)))
+		    (unless (fn-p fun)
+		      (machine-error "Entity procedure of ~A is not a function."
+				     fun))
+		    (setf code (fn-code fun)
+			  env (fn-env fun)
+			  pc 0
+			  n-args (arg1 instr))))
 		 (t
 		  (machine-error "Trying to call an unknown function."))))
 	  (ARGS
@@ -174,17 +180,27 @@
 	   (push (funcall (opcode instr)) stack))
 	  
 	  ;; Unary operations:
-	  ((CAR CDR CADR NOT LIST1 COMPILER DISPLAY WRITE RANDOM) 
+	  ((CAR CDR CADR NOT
+		CONSP BOOLEANP SYMBOLP FN-P NUMBERP VECTORP CHARACTERP STRINGP
+		;; TODO: Streams or ports.
+		LIST1
+		%INSTANCE-CLASS %INSTANCE-PROC %INSTANCEP
+		COMPILER DISPLAY WRITE RANDOM) 
 	   (push (funcall (opcode instr) (pop stack)) stack))
 	  
 	  ;; Binary operations:
-	  ((+ - * / < > <= >= /= = CONS LIST2 CAR-SETTER CDR-SETTER NAME! EQ EQUAL EQL)
+	  ((+ - * / < > <= >= /= =
+	      CONS LIST2 CAR-SETTER CDR-SETTER
+	      %ALLOCATE-INSTANCE %ALLOCATE-ENTITY
+	      %INSTANCE-REF
+	      NAME! EQ EQUAL EQL)
 	   (setf stack (cons (funcall (opcode instr) (second stack)
 				      (first stack))
 			     (rest2 stack))))
 	  
 	  ;; Ternary operations:
-	  (LIST3
+	  ((LIST3
+	    %INSTANCE-SETTER %INSTANCE-PROC-SETTER)
 	   (setf stack (cons (funcall (opcode instr) (third stack)
 				      (second stack) (first stack))
 			     (rest3 stack))))
