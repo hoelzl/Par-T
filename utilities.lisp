@@ -47,8 +47,21 @@
 
 ;;; These should probably be constants for efficiency reasons.
 
-(defvar *true* (gensym "TRUE"))
-(defvar *false* (gensym "FALSE"))
+(defstruct par-t-boolean)
+
+(defstruct (par-t-true
+	    (:include par-t-boolean)
+	    (:print-function (lambda (obj stream depth)
+			       (declare (ignore obj depth))
+			       (format stream "#t")))))
+(defstruct (par-t-false
+	    (:include par-t-boolean)
+	    (:print-function (lambda (obj stream depth)
+			       (declare (ignore obj depth))
+			       (format stream "#f")))))
+
+(defvar *true* (make-par-t-true))
+(defvar *false* (make-par-t-false))
 
 ;;; The definition of a function for the VM.
 ;;; ---------------------------------------
@@ -63,7 +76,7 @@
   symbol n-args opcode always side-effects)
 
 (defun par-t-not (obj)
-  (if (eq obj *false*)
+  (if (par-t-false-p obj)
       *true*
       *false*))
 
@@ -117,8 +130,7 @@
   (as-par-t-boolean (consp obj)))
 
 (defun par-t-booleanp (obj)
-  (as-par-t-boolean (or (eq obj *true*)
-			(eq obj *false*))))
+  (as-par-t-boolean (par-t-boolean-p obj)))
 
 (defun par-t-symbolp (obj)
   (as-par-t-boolean (symbolp obj)))
@@ -175,20 +187,10 @@
 ;;; This could also be done by defining PRINT-OBJECT methods
 ;;; (potentially by intorducing structs for true and false values).
 (defun display (x)
-  (cond ((eq x *true*)
-	 (princ "#t"))
-	((eq x *false*)
-	 (princ "#f"))
-	(t
-	 (princ x))))
+  (princ x))
 
 (defun par-t-write (x)
-  (cond ((eq x *true*)
-	 (princ "#t"))
-	((eq x *false*)
-	 (princ "#f"))
-	(t
-	 (write x))))
+  (write x))
 
 (defun newline ()
   (terpri))

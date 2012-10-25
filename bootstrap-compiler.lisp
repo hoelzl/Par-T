@@ -34,7 +34,7 @@
 (defun par-t-macro (symbol)
   (and (symbolp symbol) (get symbol 'par-t-macro)))
 
-(defmacro define-macro (name parmlist &body body)
+(defmacro define-par-t-macro (name parmlist &body body)
   "Define a Par-T macro."
   `(setf (get ',name 'par-t-macro)
          #'(lambda ,parmlist .,body)))
@@ -53,7 +53,7 @@
   '((car . car-setter!)
     (cdr . cdr-setter!)))
 
-(define-macro set! (place value)
+(define-par-t-macro set! (place value)
   (if (symbolp place)
       `(lset! ,place ,value)
       (let ((setter (cdr (assoc (first place) *setters*))))
@@ -64,30 +64,30 @@
 	    ;; dispatch on the car.
 	    `((setter ,(car place)) ,value ,@(rest place))))))
 
-(define-macro let (bindings &rest body)
+(define-par-t-macro let (bindings &rest body)
   `((lambda ,(mapcar #'first bindings) . ,body)
     .,(mapcar #'second bindings)))
 
-(define-macro let* (bindings &rest body)
+(define-par-t-macro let* (bindings &rest body)
   (if (null bindings)
       `(begin .,body)
       `(let (,(first bindings))
          (let* ,(rest bindings) . ,body))))
 
-(define-macro and (&rest args)
+(define-par-t-macro and (&rest args)
   (cond ((null args) 'T)
         ((length=1 args) (first args))
         (t `(if ,(first args)
                 (and . ,(rest args))))))
 
-(define-macro or (&rest args)
+(define-par-t-macro or (&rest args)
   (cond ((null args) 'nil)
         ((length=1 args) (first args))
         (t (let ((var (gensym)))
              `(let ((,var ,(first args)))
                 (if ,var ,var (or . ,(rest args))))))))
 
-(define-macro cond (&rest clauses)
+(define-par-t-macro cond (&rest clauses)
   (cond ((null clauses) nil)
         ((length=1 (first clauses))
          `(or ,(first clauses) (cond .,(rest clauses))))
@@ -97,7 +97,7 @@
                 (begin .,(rest (first clauses)))
                 (cond .,(rest clauses))))))
 
-(define-macro case (key &rest clauses)
+(define-par-t-macro case (key &rest clauses)
   (let ((key-val (gensym "KEY")))
     `(let ((,key-val ,key))
        (cond ,@(mapcar
@@ -108,16 +108,16 @@
                           .,(rest clause))))
                 clauses)))))
 
-(define-macro define (name &rest body)
+(define-par-t-macro define (name &rest body)
   (if (atom name)
       `(begin (lset! ,name . ,body) ',name)
       `(define ,(first name) 
          (lambda ,(rest name) . ,body))))
 
-(define-macro delay (computation)
+(define-par-t-macro delay (computation)
   `(lambda () ,computation))
 
-(define-macro letrec (bindings &rest body)
+(define-par-t-macro letrec (bindings &rest body)
   `(let ,(mapcar #'(lambda (v) (list (first v) nil)) bindings)
      ,@(mapcar #'(lambda (v) `(lset! .,v)) bindings)
      .,body))
@@ -161,7 +161,7 @@
 
 ;;; ==============================
 
-(define-macro define (name &rest body)
+(define-par-t-macro define (name &rest body)
   (if (atom name)
       `(name! (lset! ,name . ,body) ',name)
       (par-t-macro-expand
@@ -191,7 +191,7 @@
 (defun comp (x env val? more?)
   "Compile the expression x into a list of instructions"
     (cond
-      ((member x (list *true* *false*)) (comp-const x val? more?))
+      ((par-t-boolean-p x) (comp-const x val? more?))
       ((symbolp x) (comp-var x env val? more?))
       ((atom x) (comp-const x val? more?))
       ((par-t-macro (first x)) (comp (par-t-macro-expand x) env val? more?))
@@ -259,11 +259,11 @@
 (defun comp-if (pred then else env val? more?)
   "Compile a conditional (IF) expression."
   (cond
-    ((eq pred *false*)    ; (if #f x y) ==> y
+    ((par-t-false-p pred)    ; (if #f x y) ==> y
      (comp else env val? more?))
-    ((eq pred *true*)     ; (if t x y) ==> x
+    ((par-t-true-p pred)     ; (if #t x y) ==> x
      (comp then env val? more?))
-    ((and (listp pred)    ; (if (not p) x y) ==> (if p y x)
+    ((and (listp pred)       ; (if (not p) x y) ==> (if p y x)
           (length=1 (rest pred))
           (primitive-p (first pred) env 1)
           (eq (prim-opcode (primitive-p (first pred) env 1)) 'not))
