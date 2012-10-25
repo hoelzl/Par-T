@@ -209,7 +209,13 @@
 			     (rest3 stack))))
 	  
 	  ;; Constants:
-	  ((T NIL -1 0 1 2)
+	  ((par-t-true)
+	   (push *true* stack))
+
+	  ((par-t-false)
+	   (push *false* stack))
+
+	  ((-1 0 1 2)
 	   (push (opcode instr) stack))
 	  
 	  ;; Other:

@@ -78,6 +78,21 @@
        (not (null? '(1 2)))
        (not (null? 1))))
 
+(define (type-predicate-test-boolean)
+  (and (boolean? #t)
+       (boolean? #f)
+       (not (boolean? 1))
+       (not (boolean? '()))))
+
+(define (type-predicate-test-symbol)
+  (and (symbol? 'foo)
+       (not (symbol? "foo"))
+       ;; This is a bug that's not easy to fix unless we define our
+       ;; own symbol or list classes...
+       ;; (not (symbol? '()))
+       (not (symbol? #t))
+       (not (symbol? #f))))
+
 (define (boolean-tests)
   (write (list (boolean-values-test)
 	       (if-test-01)
@@ -87,7 +102,10 @@
 
 (define (type-predicate-tests)
   (write (list (type-predicate-test-pair)
-	       (type-predicate-test-null)))
+	       (type-predicate-test-null)
+	       (type-predicate-test-boolean)
+	       (type-predicate-test-symbol)
+	       ))
   (newline))
 
 (define (all-tests)

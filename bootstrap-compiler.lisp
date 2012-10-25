@@ -75,20 +75,20 @@
          (let* ,(rest bindings) . ,body))))
 
 (define-par-t-macro and (&rest args)
-  (cond ((null args) 'T)
+  (cond ((null args) *true*)
         ((length=1 args) (first args))
         (t `(if ,(first args)
                 (and . ,(rest args))))))
 
 (define-par-t-macro or (&rest args)
-  (cond ((null args) 'nil)
+  (cond ((null args) *false*)
         ((length=1 args) (first args))
         (t (let ((var (gensym)))
              `(let ((,var ,(first args)))
                 (if ,var ,var (or . ,(rest args))))))))
 
 (define-par-t-macro cond (&rest clauses)
-  (cond ((null clauses) nil)
+  (cond ((null clauses) *false*)
         ((length=1 (first clauses))
          `(or ,(first clauses) (cond .,(rest clauses))))
         ((starts-with (first clauses) 'else)
@@ -108,17 +108,25 @@
                           .,(rest clause))))
                 clauses)))))
 
+#+(or)
 (define-par-t-macro define (name &rest body)
   (if (atom name)
       `(begin (lset! ,name . ,body) ',name)
       `(define ,(first name) 
          (lambda ,(rest name) . ,body))))
 
+(define-par-t-macro define (name &rest body)
+  (if (atom name)
+      `(name! (lset! ,name . ,body) ',name)
+      (par-t-macro-expand
+         `(define ,(first name) 
+            (lambda ,(rest name) . ,body)))))
+
 (define-par-t-macro delay (computation)
   `(lambda () ,computation))
 
 (define-par-t-macro letrec (bindings &rest body)
-  `(let ,(mapcar #'(lambda (v) (list (first v) nil)) bindings)
+  `(let ,(mapcar #'(lambda (v) (list (first v) *false*)) bindings)
      ,@(mapcar #'(lambda (v) `(lset! .,v)) bindings)
      .,body))
 
@@ -161,13 +169,6 @@
 
 ;;; ==============================
 
-(define-par-t-macro define (name &rest body)
-  (if (atom name)
-      `(name! (lset! ,name . ,body) ',name)
-      (par-t-macro-expand
-         `(define ,(first name) 
-            (lambda ,(rest name) . ,body)))))
-
 (defun name! (fn name)
   "Set the name field of fn, if it is an un-named fn."
   (when (and (fn-p fn) (null (fn-name fn)))
@@ -208,7 +209,7 @@
                       (if (not val?) (gen 'POP))
                       (unless more? (gen 'RETURN))))
          (IF     (arg-count x 2 3)
-                 (comp-if (second x) (third x) (fourth x)
+                 (comp-if (second x) (third x) (or (fourth x) *false*)
                           env val? more?))
          (LAMBDA (when val?
                    (let ((f (comp-lambda (second x) (rest2 x) env)))
@@ -245,9 +246,14 @@
 
 (defun comp-const (x val? more?)
   "Compile a constant expression."
-  (if val? (seq (if (member x '(t nil -1 0 1 2))
-                    (gen x)
-                    (gen 'CONST x))
+  (if val? (seq (cond ((par-t-true-p x)
+		       (gen 'par-t-true))
+		      ((par-t-false-p x)
+		       (gen 'par-t-false))
+		      ((member x '(-1 0 1 2))
+		       (gen x))
+		      (t
+		       (gen 'CONST x)))
                 (unless more? (gen 'RETURN)))))
 
 (defun comp-var (x env val? more?)
