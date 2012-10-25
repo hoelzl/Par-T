@@ -42,6 +42,14 @@
 ;;; Structures used in both the VM and the compiler.
 ;;; ===============================================
 
+;;; The Boolean values.
+;;; ------------------
+
+;;; These should probably be constants for efficiency reasons.
+
+(defvar *true* (gensym "TRUE"))
+(defvar *false* (gensym "FALSE"))
+
 ;;; The definition of a function for the VM.
 ;;; ---------------------------------------
 
@@ -54,15 +62,81 @@
 (defstruct (prim (:type list)) 
   symbol n-args opcode always side-effects)
 
+(defun par-t-not (obj)
+  (if (eq obj *false*)
+      *true*
+      *false*))
+
+(declaim (inline as-par-t-boolean))
+(defun as-par-t-boolean (value)
+  (if value
+      *true*
+      *false*))
+
+(defun par-t-< (lhs rhs)
+  (as-par-t-boolean (< lhs rhs)))
+
+(defun par-t-> (lhs rhs)
+  (as-par-t-boolean (> lhs rhs)))
+
+(defun par-t-<= (lhs rhs)
+  (as-par-t-boolean (<= lhs rhs)))
+
+(defun par-t->= (lhs rhs)
+  (as-par-t-boolean (>= lhs rhs)))
+
+(defun par-t-/= (lhs rhs)
+  (as-par-t-boolean (/= lhs rhs)))
+
+(defun par-t-= (lhs rhs)
+  (as-par-t-boolean (= lhs rhs)))
+
+(defun par-t-eq (lhs rhs)
+  (as-par-t-boolean (eq lhs rhs)))
+
+(defun par-t-eql (lhs rhs)
+  (as-par-t-boolean (eql lhs rhs)))
+
+(defun par-t-equal (lhs rhs)
+  (as-par-t-boolean (equal lhs rhs)))
+
+(defun list1 (x) (list x))
+(defun list2 (x y) (list x y))
+(defun list3 (x y z) (list x y z))
+
 (defun car-setter (new-value cons)
   (setf (car cons) new-value))
 
 (defun cdr-setter (new-value cons)
   (setf (cdr cons) new-value))
 
-(defun booleanp (obj)
-  (or (eq obj nil)
-      (eq obj t)))
+(defun par-t-null (obj)
+  (as-par-t-boolean (null obj)))
+
+(defun par-t-consp (obj)
+  (as-par-t-boolean (consp obj)))
+
+(defun par-t-booleanp (obj)
+  (as-par-t-boolean (or (eq obj *true*)
+			(eq obj *false*))))
+
+(defun par-t-symbolp (obj)
+  (as-par-t-boolean (symbolp obj)))
+
+(defun par-t-fn-p (obj)
+  (as-par-t-boolean (fn-p obj)))
+
+(defun par-t-numberp (obj)
+  (as-par-t-boolean (numberp obj)))
+
+(defun par-t-vectorp (obj)
+  (as-par-t-boolean (vectorp obj)))
+
+(defun par-t-characterp (obj)
+  (as-par-t-boolean (characterp obj)))
+
+(defun par-t-stringp (obj)
+  (as-par-t-boolean (stringp obj)))
 
 (defstruct pt-object
   class
@@ -89,13 +163,36 @@
   (setf (pt-entity-proc obj) new-proc))
 
 (defun %instancep (obj)
-  (pt-object-p obj))
+  (as-par-t-boolean (pt-object-p obj)))
 
 (defun %instance-ref (obj index)
   (svref (pt-object-slots obj) index))
 
 (defun %instance-setter (new-value obj index)
   (setf (svref (pt-object-slots obj) index) new-value))
+
+;;; TODO: The print function should deal with embedded truth values.
+;;; This could also be done by defining PRINT-OBJECT methods
+;;; (potentially by intorducing structs for true and false values).
+(defun display (x)
+  (cond ((eq x *true*)
+	 (princ "#t"))
+	((eq x *false*)
+	 (princ "#f"))
+	(t
+	 (princ x))))
+
+(defun par-t-write (x)
+  (cond ((eq x *true*)
+	 (princ "#t"))
+	((eq x *false*)
+	 (princ "#f"))
+	(t
+	 (write x))))
+
+(defun newline ()
+  (terpri))
+
 
 (defparameter *primitive-fns*
   '(;; Arithmetic and numerical comparisons
@@ -111,22 +208,22 @@
     (= 2 = nil nil)
 
     ;; General comparisons and logical functions
-    (eq? 2 eq nil nil)
-    (eqv? 2 eql nil nil)
-    (equal? 2 equal nil nil)
-    (not 1 not nil nil)
+    (eq? 2 par-t-eq nil nil)
+    (eqv? 2 par-t-eql nil nil)
+    (equal? 2 par-t-equal nil nil)
+    (not 1 par-t-not nil nil)
 
     ;; Type predicates
-    (null? 1 not nil nil)
-    (pair? 1 consp nil nil)
-    (boolean? 1 booleanp nil nil)
-    (symbol? 1 symbolp nil nil)
+    (null? 1 par-t-null nil nil)
+    (pair? 1 par-t-consp nil nil)
+    (boolean? 1 par-t-booleanp nil nil)
+    (symbol? 1 par-t-symbolp nil nil)
     ;; Maybe this should include entities as well?
-    (procedure? 1 fn-p nil nil)
-    (number? 1 numberp nil nil)
-    (vector? 1 vectorp nil nil)
-    (char? 1 characterp nil nil)
-    (string? 1 stringp nil nil)
+    (procedure? 1 par-t-fn-p nil nil)
+    (number? 1 par-t-numberp nil nil)
+    (vector? 1 par-t-vectorp nil nil)
+    (char? 1 par-t-characterp nil nil)
+    (string? 1 par-t-stringp nil nil)
     
     ;; Primitives for lists
     (cons 2 cons true nil)
@@ -135,8 +232,11 @@
     (cdr 1 cdr nil nil)
     (cdr-setter! 2 cdr-setter nil nil)
     (cadr 1 cadr nil nil) 
+    #+(or)
     (list 1 list1 true nil)
+    #+(or)
     (list 2 list2 true nil)
+    #+(or)
     (list 3 list3 true nil)
 
     ;; Instance handling for the object system
@@ -152,7 +252,7 @@
     ;; Reading and writing
     (read 0 par-t-read nil t)
     (eof-object? 1 eof-object? nil nil)
-    (write 1 write nil t)
+    (write 1 par-t-write nil t)
     (display 1 display nil t)
     (newline 0 newline nil t)
 
@@ -170,10 +270,3 @@
              :test #'(lambda (f prim)
                        (and (eq f (prim-symbol prim))
                             (= n-args (prim-n-args prim)))))))
-
-(defun list1 (x) (list x))
-(defun list2 (x y) (list x y))
-(defun list3 (x y z) (list x y z))
-(defun display (x) (princ x))
-(defun newline () (terpri))
-

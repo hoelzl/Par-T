@@ -76,9 +76,11 @@
 	  (JUMP
 	   (setf pc (arg1 instr)))
 	  (FJUMP
-	   (if (null (pop stack)) (setf pc (arg1 instr))))
+	   (when (eq *false* (pop stack))
+	     (setf pc (arg1 instr))))
 	  (TJUMP
-	   (if (pop stack) (setf pc (arg1 instr))))
+	   (when (not (eq *false* (pop stack)))
+	     (setf pc (arg1 instr))))
 	  
 	  ;; Function call/return instructions:
 	  (SAVE
@@ -180,20 +182,21 @@
 	   (push (funcall (opcode instr)) stack))
 	  
 	  ;; Unary operations:
-	  ((CAR CDR CADR NOT
-		CONSP BOOLEANP SYMBOLP FN-P NUMBERP VECTORP CHARACTERP STRINGP
+	  ((CAR CDR CADR PAR-T-NOT PAR-T-NULL
+		PAR-T-CONSP PAR-T-BOOLEANP PAR-T-SYMBOLP PAR-T-FN-P 
+		PAR-T-NUMBERP PAR-T-VECTORP PAR-T-CHARACTERP PAR-T-STRINGP
 		;; TODO: Streams or ports.
 		LIST1
 		%INSTANCE-CLASS %INSTANCE-PROC %INSTANCEP
-		COMPILER DISPLAY WRITE RANDOM) 
+		COMPILER DISPLAY PAR-T-WRITE RANDOM) 
 	   (push (funcall (opcode instr) (pop stack)) stack))
 	  
 	  ;; Binary operations:
-	  ((+ - * / < > <= >= /= =
+	  ((+ - * / PAR-T-< PAR-T-> PAR-T-<= PAR-T->= PAR-T-/= PAR-T-=
 	      CONS LIST2 CAR-SETTER CDR-SETTER
 	      %ALLOCATE-INSTANCE %ALLOCATE-ENTITY
 	      %INSTANCE-REF
-	      NAME! EQ EQUAL EQL)
+	      NAME! PAR-T-EQ PAR-T-EQUAL PAR-T-EQL)
 	   (setf stack (cons (funcall (opcode instr) (second stack)
 				      (first stack))
 			     (rest2 stack))))

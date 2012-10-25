@@ -191,7 +191,7 @@
 (defun comp (x env val? more?)
   "Compile the expression x into a list of instructions"
     (cond
-      ((member x '(t nil)) (comp-const x val? more?))
+      ((member x (list *true* *false*)) (comp-const x val? more?))
       ((symbolp x) (comp-var x env val? more?))
       ((atom x) (comp-const x val? more?))
       ((par-t-macro (first x)) (comp (par-t-macro-expand x) env val? more?))
@@ -259,9 +259,9 @@
 (defun comp-if (pred then else env val? more?)
   "Compile a conditional (IF) expression."
   (cond
-    ((null pred)          ; (if nil x y) ==> y
+    ((eq pred *false*)    ; (if #f x y) ==> y
      (comp else env val? more?))
-    ((eq t pred)          ; (if t x y) ==> x
+    ((eq pred *true*)     ; (if t x y) ==> x
      (comp then env val? more?))
     ((and (listp pred)    ; (if (not p) x y) ==> (if p y x)
           (length=1 (rest pred))
@@ -441,6 +441,8 @@
 
 (defun init-par-t-comp ()
   "Initialize values (including call/cc) for the Par-T compiler."
+  (set-global-var! 'true *true*)
+  (set-global-var! 'false *false*)
   (set-global-var! 'exit 
     (new-fn :name 'exit :args '(val) :code '((HALT))))
   (set-global-var! 'call/cc
@@ -556,13 +558,13 @@
 (set-dispatch-macro-character #\# #\t 
   #'(lambda (&rest ignore)
       (declare (ignore ignore))
-      t)
+      *true*)
   *par-t-readtable*)
 
 (set-dispatch-macro-character #\# #\f 
   #'(lambda (&rest ignore)
       (declare (ignore ignore))
-      nil)
+      *false*)
   *par-t-readtable*)
 
 (set-dispatch-macro-character #\# #\d

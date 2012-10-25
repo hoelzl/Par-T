@@ -12,6 +12,9 @@
 ;;; List Functions
 ;;; ==============
 
+(define (list . args)
+  args)
+
 (define (first list)
   (car list))
 
