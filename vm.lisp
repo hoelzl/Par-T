@@ -178,7 +178,7 @@
 	   (push (funcall (opcode instr) (pop stack)) stack))
 	  
 	  ;; Binary operations:
-	  ((+ - * / < > <= >= /= = CONS LIST2 SETF-CAR SETF-CDR NAME! EQ EQUAL EQL)
+	  ((+ - * / < > <= >= /= = CONS LIST2 CAR-SETTER CDR-SETTER NAME! EQ EQUAL EQL)
 	   (setf stack (cons (funcall (opcode instr) (second stack)
 				      (first stack))
 			     (rest2 stack))))

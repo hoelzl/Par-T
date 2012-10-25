@@ -48,6 +48,22 @@
 
 ;;; ==============================
 
+;;; TODO: We need a way to define new setters as macros.
+(defparameter *setters*
+  '((car . car-setter!)
+    (cdr . cdr-setter!)))
+
+(define-macro set! (place value)
+  (if (symbolp place)
+      `(lset! ,place ,value)
+      (let ((setter (cdr (assoc (first place) *setters*))))
+	(if setter
+	    ;; If a setter exists, generate a direct call.
+	    `(,setter ,value ,@(rest place))
+	    ;; Otherwise call the generic function `setter' to allow
+	    ;; dispatch on the car.
+	    `((setter ,(car place)) ,value ,@(rest place))))))
+
 (define-macro let (bindings &rest body)
   `((lambda ,(mapcar #'first bindings) . ,body)
     .,(mapcar #'second bindings)))

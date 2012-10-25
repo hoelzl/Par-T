@@ -54,10 +54,10 @@
 (defstruct (prim (:type list)) 
   symbol n-args opcode always side-effects)
 
-(defun setf-car (cons new-value)
+(defun car-setter (new-value cons)
   (setf (car cons) new-value))
 
-(defun setf-cdr (cons new-value)
+(defun cdr-setter (new-value cons)
   (setf (cdr cons) new-value))
 
 (defparameter *primitive-fns*
@@ -78,9 +78,9 @@
     (null? 1 not nil nil)
     (cons 2 cons true nil)
     (car 1 car nil nil)
-    (set-car! 2 setf-car nil nil)
+    (car-setter! 2 car-setter nil nil)
     (cdr 1 cdr nil nil)
-    (set-cdr! 2 setf-cdr nil nil)
+    (cdr-setter! 2 cdr-setter nil nil)
     (cadr 1 cadr nil nil) 
     (list 1 list1 true nil)
     (list 2 list2 true nil)
