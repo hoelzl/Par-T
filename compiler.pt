@@ -1,0 +1,30 @@
+(herald "The Par-T-Compiler")
+
+;;; The function `set-global-var' is only used for the initialization
+;;; of the runtime system (in INIT-SCHEME-COMP) and has to be
+;;; synchronized with global-variable access of the VM (e.g., the
+;;; cases GVAR and GSET in the current VM).
+(define *global-vars* '())
+
+(define (set-global-var! var val)
+  (let ((binding (assoc var *global-vars*)))
+    (if binding
+	(set! (cdr binding) val)
+	(set! *global-vars*
+	      (cons (cons var val) *global-vars*)))))
+
+
+;;; Handling of Par-T macros in Par-T
+;;; =================================
+
+(define *par-t-macros* '())
+
+(define-macro define-macro (name args . body)
+  (let ((macro-binding (assoc name *par-t-macros*)))
+    (if macro-binding
+	(set! (cdr macro-binding)
+	      (compiler `(lambda ,args . ,body)))
+	(set! *par-t-macros*
+	      (cons (cons name (compiler `(lambda ,args . , body)))
+		    *par-t-macros*)))))
+

@@ -1,0 +1,35 @@
+(define (call/cc-test-01)
+  (cons 1 (call/cc (lambda (cc)
+		     (cons 2 '(3))))))
+
+(define (call/cc-test-02)
+  (cons 1 (call/cc (lambda (cc)
+		     (cons 2 (cc '(3)))))))
+
+(define (call/cc-test-03)
+  (cons 1 (call/cc (lambda (cc)
+		     (cons 2 (cons 3 (cc '())))))))
+
+(define (call/cc-test-04)
+  (let ((my-cont '()))
+    (write
+     (cons 1 (call/cc (lambda (cc)
+			(set! my-cont
+			      (lambda (x)
+				(set! my-cont (lambda (y)
+						(write (cons 'done y))
+						(newline)))
+				(cc x)))
+			(cons 2 '(3))))))
+    (newline)
+    (my-cont '(foo))))
+
+(define (all-tests)
+  (write (call/cc-test-01))
+  (newline)
+  (write (call/cc-test-02))
+  (newline)
+  (write (call/cc-test-03))
+  (newline)
+  (write (call/cc-test-04))
+  (newline))

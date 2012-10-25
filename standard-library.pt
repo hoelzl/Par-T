@@ -1,0 +1,84 @@
+(herald "The Par-T-Standard-Library")
+
+;;; Define this when we have a better continuation handling.
+(define (error . args)
+  (write args))
+
+(define else #t)
+
+(define (undefined)
+  'the-undefined-value)
+
+;;; List Functions
+;;; ==============
+
+(define (first list)
+  (car list))
+
+(define (second list)
+  (cadr list))
+
+(define (rest list)
+  (cdr list))
+
+(define (ass pred object alist)
+  (cond ((null? alist)
+	 #f)
+	((pred object (first (first alist)))
+	 (first alist))
+	(else 
+	 (ass pred object (rest alist)))))
+
+(define (assq object alist)
+  (ass eq? object alist))
+
+(define (reverse lst)
+  (if (null? lst)
+      '()
+      (cons (first lst) (reverse (rest lst)))))
+
+(define (append lst1 lst2)
+  (if (null? lst1)
+      lst2
+      (cons (first lst1)
+	    (append (rest lst1) lst2))))
+
+;;; Simple single-argument map for now.
+(define (map proc arg)
+  (if (null? arg)
+      '()
+      (cons (proc (first arg))
+	    (map proc (rest arg)))))
+
+;;; Simple single-argument for-each for now.
+(define (for-each proc arg)
+  (if (null? arg)
+      (undefined)
+      (begin
+	(proc (first arg))
+	(for-each proc (rest arg)))))
+
+;;; Non-Deterministic Computation
+;;; =============================
+
+(define choice-points '())
+
+(define (fail)
+  (if (null? choice-points)
+      (error "Fail without choice point.")
+      (let ((next-choice (first choice-points)))
+	(set! choice-points (rest choice-points))
+	(next-choice))))
+
+(define (create-choice-points . procs)
+  (call/cc (lambda (cc)
+	     (let ((new-cps (map (lambda (proc)
+				   (lambda ()
+				     (cc (proc))))
+				 procs)))
+	       (set! choice-points
+		     (append new-cps choice-points)))
+	     (fail))))
+
+
+      
