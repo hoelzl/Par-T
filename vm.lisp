@@ -27,6 +27,7 @@
 (defun top (stack) (first stack))
 
 (defvar *trace-par-t-vm* nil)
+(defvar *trace-par-t-global-loads* nil)
 
 (defun machine (f &optional (error-fun *error-fun*))
   "Run the abstract machine on the code for f."
@@ -48,19 +49,20 @@
 		     env nil
 		     n-args 0))
 	     (set-up-call (fun call-n-args)
-	       (setf f fun)
-	       (cond ((fn-p f)
-		      (setf code (fn-code f)
-			    env (fn-env f)
+	       (cond ((fn-p fun)
+		      (setf f fun)
+		      (setf code (fn-code fun)
+			    env (fn-env fun)
 			    pc 0
 			    n-args call-n-args))
-		     ((pt-entity-p f)
-		      (let ((fun (%instance-proc f)))
-			(unless (fn-p fun)
+		     ((pt-entity-p fun)
+		      (let ((real-fun (%instance-proc fun)))
+			(setf f real-fun)
+			(unless (fn-p real-fun)
 			  (machine-error "Entity procedure of ~A is not a function."
 					 fun))
-			(setf code (fn-code fun)
-			      env (fn-env fun)
+			(setf code (fn-code real-fun)
+			      env (fn-env real-fun)
 			      pc 0
 			      n-args call-n-args)))
 		     (t
@@ -93,6 +95,9 @@
 	   (multiple-value-bind (indicator value)
 	       (get-properties (symbol-plist (arg1 instr)) '(global-val))
 	     (cond ((eq indicator 'global-val)
+		    (when *trace-par-t-global-loads*
+		      (format *trace-output*
+			      "~&>>> PT: accessing ~A~%" (arg1 instr)))
 		    (push value stack))
 		   (t
 		    (machine-error "Unbound global variable ~A.~%  ~

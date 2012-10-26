@@ -77,6 +77,15 @@
 (define (ninth lst)
   (car (cddddr (cddddr lst))))
 
+(define (list-ref lst n)
+  (cond ((null? lst)
+	 #f)
+	((= n 0)
+	 (car lst))
+	(else
+	 (list-ref (cdr lst) (- n 1)))))
+      
+
 (define (rest lst)
   (cdr lst))
 
@@ -112,8 +121,10 @@
 (define (mem? pred object lst)
   (cond ((null? lst)
 	 #f)
+	;; ((not (pair? lst))
+	;; #f)
 	((pred object (first lst))
-	 #t)
+	 lst)
 	(else
 	 (mem? pred object (cdr lst)))))
 
@@ -243,7 +254,7 @@
 	   (if (pair? not-found)
 	       (first not-found)
 	       (error "GETL couldn't find" name)))
-	  ((eq? (first tail) name) (secodn tail))
+	  ((eq? (first tail) name) (second tail))
 	  (else (scan (rest2 tail))))))
 
 
@@ -261,10 +272,22 @@
 	result
 	(scan (cdr tail) (cons (car tail) result)))))
 
-(define (append lst1 lst2)
+(define (append2 lst1 lst2)
   (if (null? lst1)
       lst2
-      (cons (car lst1) (append (cdr lst1) lst2))))
+      (cons (car lst1) (append2 (cdr lst1) lst2))))
+
+(define (append . lists)
+  (cond ((null? lists)
+	 '())
+	((null? (cdr lists))
+	 (car lists))
+	;; This is quite inefficient; should start from the back of
+	;; the lists...
+	(else
+	 (apply append 
+		(append2 (car lists) (cadr lists))
+		(rest2 lists)))))
 
 
 (define (map-append proc . lists)

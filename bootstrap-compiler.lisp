@@ -710,12 +710,20 @@
 
 ;;; ==============================
 
+(defvar *trace-par-t-reader* nil)
+
 (defun load-par-t-file (file-name)
   (let ((result '()))
     (with-open-file (stream file-name :direction :input)
       (do ((form (par-t-read stream) (par-t-read stream)))
 	  ((eof-object? form) (nreverse result))
-	(push (comp-go form) result)))))
+        (when *trace-par-t-reader*
+          (format *trace-output*
+                  "~&Reading: ~:W~%" form)
+          (force-output *trace-output*))
+        (let ((evaluation-result (comp-go form)))
+          (when (or (stringp evaluation-result) (symbolp evaluation-result))
+            (push evaluation-result result)))))))
 
 (defun par-t-system-file (name)
   (merge-pathnames
@@ -725,13 +733,11 @@
 (defun load-par-t-standard-library ()
   (let ((stdlib (par-t-system-file "standard-library"))
         (object-system (par-t-system-file "objects")))
-    (declare (ignorable object-system))
     (flet ((print-herald (list)
              (format t "Loading ~A~%" (first list))
              (format t "Defined ~:W~%" (rest list))
              (force-output)))
       (print-herald (load-par-t-file stdlib))
-      #+(or)
       (print-herald (load-par-t-file object-system)))))
 
 (defun load-par-t-compiler ()

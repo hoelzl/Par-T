@@ -162,7 +162,12 @@
 	    (:print-function
 	     (lambda (obj stream depth)
 	       (declare (ignore depth))
-	       (print-unreadable-object (obj stream :type t :identity t)))))
+	       (print-unreadable-object (obj stream :type t :identity t)
+		 (let ((slots (pt-object-slots obj)))
+		   (when (and slots (> (length slots) 0))
+		     (let ((name (elt slots 0)))
+		       (when (symbolp name)
+			 (format stream "~A" name)))))))))
   class
   slots)
 
@@ -298,10 +303,11 @@
 ;;; Utilities for bootstrapping the object system
 
 (defparameter *the-slots-of-a-class*
-  '(direct-supers              ; (class ...)        
+  '(name                       ; symbol (if known)
+    direct-supers              ; (class ...)        
     direct-slots               ; ((name . options) ...)
     cpl                        ; (class ...) 
     slots                      ; ((name . options) ...) 
     n-fields                   ; an integer
-    fiesld-initializers         ; (proc ...)
-    getters-n-setters))        ; ((slot-name getter setter) ...)
+    field-initializers         ; (proc ...)
+    getters-and-setters))        ; ((slot-name getter setter) ...)
