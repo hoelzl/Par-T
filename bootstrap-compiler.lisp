@@ -264,9 +264,9 @@
 (defun comp-const (x val? more?)
   "Compile a constant expression."
   (if val? (seq (cond ((par-t-true-p x)
-		       (gen 'par-t-true))
+		       (gen 'PAR-T-TRUE))
 		      ((par-t-false-p x)
-		       (gen 'par-t-false))
+		       (gen 'PAR-T-FALSE))
 		      ((member x '(-1 0 1 2))
 		       (gen x))
 		      (t
@@ -426,9 +426,11 @@
         (code-vector (make-array length)))
     (dolist (instr code)
       (unless (label-p instr)
-        (if (is instr '(JUMP TJUMP FJUMP SAVE))
-            (setf (arg1 instr)
-                  (cdr (assoc (arg1 instr) labels))))
+        (when (is instr '(JUMP TJUMP FJUMP SAVE))
+          ;; Don't modify instr, in case it is a quoted literal.
+          (setf instr (copy-list instr))
+          (setf (arg1 instr)
+                (cdr (assoc (arg1 instr) labels))))
         (setf (aref code-vector addr) instr)
         (incf addr)))
     code-vector))
@@ -464,24 +466,68 @@
 
 (defun init-par-t-comp ()
   "Initialize values (including call/cc) for the Par-T compiler."
+  ;; Global constants
   (set-global-var! 'true *true*)
   (set-global-var! 'false *false*)
+
+  ;; Applying functions
+  (let ((%%apply (new-fn :name '%%apply :args '(proc length lst)
+                         :code '((ARGS 3)
+                                 LOOP
+                                 (LVAR 0 2 ";" lst)
+                                 (PAR-T-NULL)
+                                 (TJUMP EXIT)
+                                 (LVAR 0 1 ";" length)
+                                 (1)
+                                 (+)
+                                 (LSET 0 1 ";" length)
+                                 (POP)
+                                 (LVAR 0 2 ";" lst)
+                                 (CAR)
+                                 (LVAR 0 2 ";" lst)
+                                 (CDR)
+                                 (LSET 0 2 ";" lst)
+                                 (POP)
+                                 (JUMP LOOP)
+                                 EXIT
+                                 (LVAR 0 1 ";" length)
+                                 (LVAR 0 0 ";" proc)
+                                 (CALLJV)))))
+    (set-global-var! '%apply
+      (new-fn :name '%apply :args '(proc lst)
+              :env (list (vector %%apply))
+              :code '((ARGS 2)
+                      (LVAR 0 0 ";" proc)
+                      (0)
+                      (LVAR 0 1 ";" lst)
+                      (LVAR 1 0 ";" %%apply)
+                      (CALLJ 3)))))
+
+  ;; Leaving the compiler
   (set-global-var! 'exit 
      (new-fn :name 'exit :args '(val) :code '((HALT))))
+
+  ;; Support for the object system
   (let ((class-metaclass
           (%allocate-instance nil (length *the-slots-of-a-class*))))
     (setf (pt-object-class class-metaclass) class-metaclass)
     (set-global-var! '<class> class-metaclass))
   (set-global-var! '*the-slots-of-a-class* *the-slots-of-a-class*)
+
+  ;; Continuation manipulation
   (set-global-var! 'call/cc
     (new-fn :name 'call/cc :args '(f)
             :code '((ARGS 1) (CC) (LVAR 0 0 ";" f)
 		    (CALLJ 1))))
+
+  ;; File handling
   (set-global-var! 'herald
     (new-fn :name 'herald :args '(title . args)
 	    :code '((VARARGS 1)
 		    (LVAR 0 0 ";" title)
 		    (RETURN))))
+
+  ;; Primitive functions
   (dolist (prim *primitive-fns*)
      (setf (get (prim-symbol prim) 'global-val)
            (new-fn :env nil :name (prim-symbol prim)

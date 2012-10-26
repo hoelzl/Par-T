@@ -11,6 +11,15 @@
 (define (undefined)
   'the-undefined-value)
 
+;;; Function Calling
+;;; ================
+
+(define (apply proc . args)
+  (if (null? (cdr args))
+      (%apply proc (car args))
+      (%apply proc (%apply list* args))))
+
+
 ;;; List Functions
 ;;; ==============
 
@@ -64,9 +73,6 @@
 
 ;;; Thie following definitions are taken from Tiny Clos.  They should
 ;;; be integrated with a more principled library.
-
-(define (apply* proc . args)
-  (apply proc (apply list* args)))
 
 (define (position-of x lst)
   (if (eq? x (car lst))

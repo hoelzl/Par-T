@@ -224,12 +224,12 @@
     (- 2 - true nil)
     (* 2 * true nil)
     (/ 2 / true nil)
-    (< 2 < nil nil)
-    (> 2 > nil nil)
-    (<= 2 <= nil nil)
-    (>= 2 >= nil nil)
-    (/= 2 /= nil nil)
-    (= 2 = nil nil)
+    (< 2 par-t-< nil nil)
+    (> 2 par-t-> nil nil)
+    (<= 2 par-t-<= nil nil)
+    (>= 2 par-t->= nil nil)
+    (/= 2 par-t-/= nil nil)
+    (= 2 par-t-= nil nil)
 
     ;; General comparisons and logical functions
     (eq? 2 par-t-eq nil nil)

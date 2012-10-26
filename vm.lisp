@@ -38,33 +38,44 @@
          (stack nil)
          (n-args 0)
          (instr nil))
-    (flet ((machine-error (format-string &rest args)
-	     (apply #'cerror 
-		    "Restart the computation with the error function."
-		    format-string args)
-	     (setf f error-fun
-		   code (fn-code f)
-		   pc 0
-		   env nil
-		   n-args 0))
-	   (print-trace-information ()
-	     (ecase *trace-par-t-vm*
-	       ((nil))
-	       (:short
-		(format *trace-output* "~&Starting VM iteration:~%")
-		(format *trace-output* "  Function:~15T~A~%" (fn-name f))
-		(format *trace-output* "  Program Counter:~15T~D~%" pc)
-		(format *trace-output* "  Instruction:~15T~:W~%" instr)
-		(format *trace-output* "  Stack:~15T~:W~%" stack))
-	       (t
-		(format *trace-output* "~&Starting VM iteration:~%")
-		(format *trace-output* "  Function:~15T~A~%" (fn-name f))
-		(format *trace-output* "  Code:~15T~:W~%" code)
-		(format *trace-output* "  Program Counter:~15T~D~%" pc)
-		(format *trace-output* "  Instruction:~15T~:W~%" instr)
-		(format *trace-output* "  Stack:~15T~:W~%" stack)
-		(format *trace-output* "  Environment:~15T~:W~%" env)
-		(format *trace-output* "  Number of Args:~15T~D~%" n-args)))))
+    (labels ((machine-error (format-string &rest args)
+	       (apply #'cerror 
+		      "Restart the computation with the error function."
+		      format-string args)
+	       (setf f error-fun
+		     code (fn-code f)
+		     pc 0
+		     env nil
+		     n-args 0))
+	     (set-up-call (fun call-n-args)
+	       (setf f fun)
+	       (cond ((fn-p f)
+		      (setf code (fn-code f)
+			    env (fn-env f)
+			    pc 0
+			    n-args call-n-args))
+		     ((pt-entity-p f)
+		      (let ((fun (%instance-proc f)))
+			(unless (fn-p fun)
+			  (machine-error "Entity procedure of ~A is not a function."
+					 fun))
+			(setf code (fn-code fun)
+			      env (fn-env fun)
+			      pc 0
+			      n-args call-n-args)))
+		     (t
+		      (machine-error "Trying to call an unknown function: ~:W." f))))
+	     (print-trace-information ()
+	       (when *trace-par-t-vm*
+		 (format *trace-output* "~&Starting VM iteration:~%")
+		 (format *trace-output* "  Function:~15T~A~%" (fn-name f))
+		 (format *trace-output* "  Program Counter:~15T~D~%" pc)
+		 (format *trace-output* "  Instruction:~15T~:W~%" instr)
+		 (format *trace-output* "  Stack:~15T~:W~%" stack)
+		 (unless (eq *trace-par-t-vm* :short)
+		   (format *trace-output* "  Code:~15T~:W~%" code)
+		   (format *trace-output* "  Environment:~15T~:W~%" env)
+		   (format *trace-output* "  Number of Args:~15T~D~%" n-args)))))
       (loop
 	(setf instr (elt code pc))
 	(print-trace-information)
@@ -136,23 +147,17 @@
 	   (pop env)
 	   ;; Set the active function to the function object on the
 	   ;; stack.
-	   (setf f (pop stack))
-	   (cond ((fn-p f)
-		  (setf code (fn-code f)
-			env (fn-env f)
-			pc 0
-			n-args (arg1 instr)))
-		 ((pt-entity-p f)
-		  (let ((fun (%instance-proc f)))
-		    (unless (fn-p fun)
-		      (machine-error "Entity procedure of ~A is not a function."
-				     fun))
-		    (setf code (fn-code fun)
-			  env (fn-env fun)
-			  pc 0
-			  n-args (arg1 instr))))
-		 (t
-		  (machine-error "Trying to call an unknown function."))))
+	   (let ((fun (pop stack)))
+	     (set-up-call fun (arg1 instr))))
+	  (CALLJV
+	   ;; See CALLJ. --tc
+	   (pop env)
+	   ;; Set the active function to the function object on the
+	   ;; stack and the number of arguments to the next object on
+	   ;; the stack.
+	   (let* ((fun (pop stack))
+		  (call-n-args (pop stack)))
+	     (set-up-call fun call-n-args)))
 	  (ARGS
 	   (unless (= n-args (arg1 instr))
 	     (machine-error "Wrong number of arguments to function ~A: ~
