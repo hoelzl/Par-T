@@ -38,6 +38,18 @@
 (define (cddr lst)
   (cdr (cdr lst)))
 
+(define (caddr lst)
+  (car (cddr lst)))
+
+(define (cdddr lst)
+  (cdr (cddr lst)))
+
+(define (cadddr lst)
+  (car (cdddr lst)))
+
+(define (cddddr lst)
+  (cdr (cdddr lst)))
+
 (define (first lst)
   (car lst))
 
@@ -45,10 +57,16 @@
   (cadr lst))
 
 (define (third lst)
-  (cadr (cdr lst)))
+  (caddr lst))
 
 (define (fourth lst)
-  (cadr (cddr lst)))
+  (cadddr lst))
+
+(define (fifth lst)
+  (car (cddddr lst)))
+
+(define (sixth lst)
+  (cadr (cddddr lst)))
 
 (define (rest lst)
   (cdr lst))
@@ -153,21 +171,26 @@
 	  ((eq? (first tail) name) (secodn tail))
 	  (else (scan (rest2 tail))))))
 
-(define (length list)
-  (if (null? list)
-      0
-      (+ 1 (length (rest list)))))
+
+(define (length lst)
+  (let scan ((tail lst)
+	     (result 0))
+    (if (null? tail)
+	result
+	(scan (rest tail) (+ result 1)))))
 
 (define (reverse lst)
-  (if (null? lst)
-      '()
-      (cons (first lst) (reverse (rest lst)))))
+  (let scan ((tail lst)
+	     (result '()))
+    (if (null? tail)
+	result
+	(scan (cdr tail) (cons (car tail) result)))))
 
 (define (append lst1 lst2)
   (if (null? lst1)
       lst2
-      (cons (car lst1)
-	    (append (cdr lst1) lst2))))
+      (cons (car lst1) (append (cdr lst1) lst2))))
+
 
 (define (map-append proc . lists)
   (apply append (apply map (cons proc lists))))
