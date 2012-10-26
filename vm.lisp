@@ -26,6 +26,8 @@
 
 (defun top (stack) (first stack))
 
+(defvar *trace-par-t-vm* nil)
+
 (defun machine (f &optional (error-fun *error-fun*))
   "Run the abstract machine on the code for f."
   (declare (optimize (debug 3)))
@@ -44,9 +46,28 @@
 		   code (fn-code f)
 		   pc 0
 		   env nil
-		   n-args 0)))
+		   n-args 0))
+	   (print-trace-information ()
+	     (ecase *trace-par-t-vm*
+	       ((nil))
+	       (:short
+		(format *trace-output* "~&Starting VM iteration:~%")
+		(format *trace-output* "  Function:~15T~A~%" (fn-name f))
+		(format *trace-output* "  Program Counter:~15T~D~%" pc)
+		(format *trace-output* "  Instruction:~15T~:W~%" instr)
+		(format *trace-output* "  Stack:~15T~:W~%" stack))
+	       (t
+		(format *trace-output* "~&Starting VM iteration:~%")
+		(format *trace-output* "  Function:~15T~A~%" (fn-name f))
+		(format *trace-output* "  Code:~15T~:W~%" code)
+		(format *trace-output* "  Program Counter:~15T~D~%" pc)
+		(format *trace-output* "  Instruction:~15T~:W~%" instr)
+		(format *trace-output* "  Stack:~15T~:W~%" stack)
+		(format *trace-output* "  Environment:~15T~:W~%" env)
+		(format *trace-output* "  Number of Args:~15T~D~%" n-args)))))
       (loop
 	(setf instr (elt code pc))
+	(print-trace-information)
 	(incf pc)
 	(case (opcode instr)
 	  
