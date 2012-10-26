@@ -68,6 +68,15 @@
 (define (sixth lst)
   (cadr (cddddr lst)))
 
+(define (seventh lst)
+  (caddr (cddddr lst)))
+
+(define (eigth lst)
+  (cadddr (cddddr lst)))
+
+(define (ninth lst)
+  (car (cddddr (cddddr lst))))
+
 (define (rest lst)
   (cdr lst))
 
@@ -99,6 +108,72 @@
 (define (assoc object alist)
   (ass equal? object alist))
 
+
+(define (mem? pred object lst)
+  (cond ((null? lst)
+	 #f)
+	((pred object (first lst))
+	 #t)
+	(else
+	 (mem? pred object (cdr lst)))))
+
+(define (memq? object lst)
+  (mem? eq? object lst))
+
+(define (memv? object lst)
+  (mem? eqv? object lst))
+
+(define (member? object lst)
+  (mem? equal? object lst))
+
+(define (union . lists)
+  (let clean ((lst (apply append lists))
+	      (result '()))
+    (cond ((null? lst) result)
+	  ((memq? (car lst) result)
+	   (clean (cdr lst) result))
+	  (else
+	   (clean (cdr lst) (cons (car lst) result))))))
+
+(define (collect-if test? list)
+  (cond ((null? list) '())
+	((test? (car list))
+	 (cons (car list) (collect-if test? (cdr list))))
+	(else (collect-if test? (cdr list)))))
+
+(define (remove-duplicates lst)
+  (let loop ((result-so-far '())
+	     (remaining lst))
+    (if (null? remaining)
+	result-so-far
+	(if (null? (memq? (car remaining) result-so-far))
+	    (loop (cons (car remaining) result-so-far)
+		  (cdr remaining))
+	    (loop result-so-far
+		  (cdr remaining))))))
+
+(define (partition-list pred pivot lst)
+  (let loop ((small-elts '())
+	     (large-elts '())
+	     (lst lst))
+    (if (null? lst)
+	(cons small-elts large-elts)
+	(let ((current (car lst)))
+	  (if (pred current pivot)
+	      (loop (cons current small-elts) large-elts (cdr lst))
+	      (loop small-elts (cons current large-elts) (cdr lst)))))))
+
+(define (gsort pred lst)
+  (cond ((null? lst)
+	 '())
+	((null? (cdr lst))
+	 lst)
+	(else
+	 (let* ((pivot  (car lst))
+		(part (partition-list pred pivot (cdr lst)))
+		(small-elts (gsort pred (car part)))
+		(large-elts (gsort pred (cdr part))))
+	   (append small-elts (cons pivot large-elts))))))
 
 ;;; Thie following definitions are taken from Tiny Clos.  They should
 ;;; be integrated with a more principled library.

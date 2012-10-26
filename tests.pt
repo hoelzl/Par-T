@@ -139,13 +139,16 @@
 	 (eqv? 4 (fourth result)))))
 
 (define (test-first-et-al)
-  (let ((lst '(1 2 3 4 5 6 7)))
+  (let ((lst '(1 2 3 4 5 6 7 8 9)))
     (and (= 1 (first lst))
 	 (= 2 (second lst))
 	 (= 3 (third lst))
 	 (= 4 (fourth lst))
 	 (= 5 (fifth lst))
-	 (= 6 (sixth lst)))))
+	 (= 6 (sixth lst))
+	 (= 7 (seventh lst))
+	 (= 8 (eigth lst))
+	 (= 9 (ninth lst)))))
 
 (define (test-last)
   (and (eq? (last '()) #f)
@@ -246,6 +249,32 @@
 	 (= 5 (fourth result)))))
 
 
+(define (test-partition-list)
+  (let* ((lst '(1 2 8 21 38 2 48))
+	 (part (partition-list < 10 lst))
+	 (small-elts (car part))
+	 (large-elts (cdr part)))
+    (and (= 4 (length small-elts))
+	 (mem? = 1 small-elts)
+	 (mem? = 2 small-elts)
+	 (mem? = 8 small-elts)
+	 (mem? = 2 small-elts)
+	 (= 3 (length large-elts))
+	 (mem? = 21 large-elts)
+	 (mem? = 38 large-elts)
+	 (mem? = 48 large-elts))))
+
+(define (test-gsort-01)
+  (let ((result (gsort < '(1 2 8 21 38 2 48))))
+    (and (= 7 (length result))
+	 (= 1 (first result))
+	 (= 2 (second result))
+	 (= 2 (third result))
+	 (= 8 (fourth result))
+	 (= 21 (fifth result))
+	 (= 38 (sixth result))
+	 (= 48 (seventh result)))))
+
 ;;; Tests for the object system
 ;;; ===========================
 
@@ -307,6 +336,14 @@
 	       (test-map-append)))
   (newline))
 
+(define (gsort-tests)
+  (display "Testing the sort algorithm")
+  (newline)
+  (write (list (test-partition-list)
+	       (test-gsort-01)))
+  (newline))
+	   
+
 (define (object-system-tests)
   (display "Testing object system")
   (newline)
@@ -318,4 +355,5 @@
   (type-predicate-tests)
   (core-language-tests)
   (standard-library-tests)
+  (gsort-tests)
   (object-system-tests))
