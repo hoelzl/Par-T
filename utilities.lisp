@@ -158,7 +158,11 @@
 (defun par-t-stringp (obj)
   (as-par-t-boolean (stringp obj)))
 
-(defstruct pt-object
+(defstruct (pt-object
+	    (:print-function
+	     (lambda (obj stream depth)
+	       (declare (ignore depth))
+	       (print-unreadable-object (obj stream :type t :identity t)))))
   class
   slots)
 
@@ -191,15 +195,22 @@
 (defun %instance-setter (new-value obj index)
   (setf (svref (pt-object-slots obj) index) new-value))
 
-;;; TODO: The print function should deal with embedded truth values.
-;;; This could also be done by defining PRINT-OBJECT methods
-;;; (potentially by intorducing structs for true and false values).
+
+;;; Print functions
+;;; ===============
+
 (defun display (x)
-  (princ x)
+  (cond ((null x)
+	 (format t "()"))
+	(t
+	 (princ x)))
   x)
 
 (defun par-t-write (x)
-  (write x)
+  (cond ((null x)
+	 (format t "()"))
+	(t
+	 (write x)))
   x)
 
 (defun newline ()
@@ -283,3 +294,14 @@
              :test #'(lambda (f prim)
                        (and (eq f (prim-symbol prim))
                             (= n-args (prim-n-args prim)))))))
+
+;;; Utilities for bootstrapping the object system
+
+(defparameter *the-slots-of-a-class*
+  '(direct-supers              ; (class ...)        
+    direct-slots               ; ((name . options) ...)
+    cpl                        ; (class ...) 
+    slots                      ; ((name . options) ...) 
+    n-fields                   ; an integer
+    fiesld-initializers         ; (proc ...)
+    getters-n-setters))        ; ((slot-name getter setter) ...)

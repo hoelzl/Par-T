@@ -46,6 +46,12 @@
         (apply (par-t-macro (first x)) (rest x)))
       x))
 
+(defun par-t-macro-expand-1 (x)
+  "Macro-expand this Par-T expression once."
+  (if (and (listp x) (par-t-macro (first x)))
+      (apply (par-t-macro (first x)) (rest x))
+      x))
+
 ;;; ==============================
 
 ;;; TODO: We need a way to define new setters as macros.
@@ -65,8 +71,15 @@
 	    `((setter ,(car place)) ,value ,@(rest place))))))
 
 (define-par-t-macro let (bindings &rest body)
-  `((lambda ,(mapcar #'first bindings) . ,body)
-    .,(mapcar #'second bindings)))
+  (if (symbolp bindings)
+      (let ((fun bindings)
+            (bindings (first body))
+            (body (rest body)))
+        `(letrec ((,fun (lambda ,(mapcar #'first bindings)
+                        ,@body)))
+            (,fun ,@(mapcar #'second bindings))))
+      `((lambda ,(mapcar #'first bindings) . ,body)
+        ,@(mapcar #'second bindings))))
 
 (define-par-t-macro let* (bindings &rest body)
   (if (null bindings)
@@ -128,7 +141,7 @@
 (define-par-t-macro letrec (bindings &rest body)
   `(let ,(mapcar #'(lambda (v) (list (first v) *false*)) bindings)
      ,@(mapcar #'(lambda (v) `(lset! .,v)) bindings)
-     .,body))
+     ,@body))
 
 ;;; ==============================
 
@@ -186,8 +199,12 @@
 
 (defun in-env-p (symbol env)
   "If symbol is in the environment, return its index numbers."
-  (let ((frame (find symbol env :test #'find)))
-    (if frame (list (position frame env) (position symbol frame)))))
+  (if (symbolp symbol)
+      (let ((frame (find symbol env :test #'find)))
+        (if frame
+            (list (position frame env) (position symbol frame))
+            nil))
+      nil))
 
 (defun comp (x env val? more?)
   "Compile the expression x into a list of instructions"
@@ -450,7 +467,12 @@
   (set-global-var! 'true *true*)
   (set-global-var! 'false *false*)
   (set-global-var! 'exit 
-    (new-fn :name 'exit :args '(val) :code '((HALT))))
+     (new-fn :name 'exit :args '(val) :code '((HALT))))
+  (let ((class-metaclass
+          (%allocate-instance nil (length *the-slots-of-a-class*))))
+    (setf (pt-object-class class-metaclass) class-metaclass)
+    (set-global-var! '<class> class-metaclass))
+  (set-global-var! '*the-slots-of-a-class* *the-slots-of-a-class*)
   (set-global-var! 'call/cc
     (new-fn :name 'call/cc :args '(f)
             :code '((ARGS 1) (CC) (LVAR 0 0 ";" f)
@@ -651,8 +673,16 @@
    (directory-namestring (asdf:system-source-file :par-t))))
 
 (defun load-par-t-standard-library ()
-  (let ((filename (par-t-system-file "standard-library")))
-    (load-par-t-file filename)))
+  (let ((stdlib (par-t-system-file "standard-library"))
+        (object-system (par-t-system-file "objects")))
+    (declare (ignorable object-system))
+    (flet ((print-herald (list)
+             (format t "Loading ~A~%" (first list))
+             (format t "Defined ~:W~%" (rest list))
+             (force-output)))
+      (print-herald (load-par-t-file stdlib))
+      #+(or)
+      (print-herald (load-par-t-file object-system)))))
 
 (defun load-par-t-compiler ()
   (let ((filename (par-t-system-file "compiler")))

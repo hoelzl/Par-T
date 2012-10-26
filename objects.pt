@@ -11,8 +11,426 @@
 	((vector? x)      <vector>)
 	((char? x)        <char>)
 	((string? x)      <string>)
-	((input-port? x)  <input-port>)
-	((output-port? x) <output-port>)
+	;; ((input-port? x)  <input-port>)
+	;; ((output-port? x) <output-port>)
 	))
 
+;;; The bootstrap version of `make'.
+;;;
+(define getters-and-setters-for-class  
+  (let* ((index 0)
+	 (make-em 
+    (map (lambda (s)
+		    (let ((result (list s
+					(lambda (o)   (%instance-ref  o index))
+					(lambda (o n) (%instance-setter! n o index)))))
+		      (set! index (+ index 1))))
+	 *the-slots-of-a-class*)))))
+
+(define (make class . initargs)
+  (cond ((or (eq? class <class>)
+	     (eq? class <entity-class>))
+	 (let* ((new (%allocate-instance
+		      class
+		      (length *the-slots-of-a-class*)))
+		(dsupers (getl initargs :direct-supers '()))
+		(dslots  (map list
+			      (getl initargs :direct-slots  '())))
+		(cpl     (let loop ((sups dsupers)
+				    (so-far (list new)))
+			   (if (null? sups)
+			       (reverse so-far)
+			       (loop (class-direct-supers
+				      (car sups))
+				     (cons (car sups)
+					   so-far)))))
+		(slots (apply append
+			      (cons dslots
+				    (map class-direct-slots
+					 (cdr cpl)))))
+		(n-fields 0)
+		(field-initializers '())
+		(allocator
+		 (lambda (init)
+		   (let ((f n-fields))
+		     (set! n-fields (+ n-fields 1))
+		     (set! field-initializers
+			   (cons init field-initializers))
+		     (list (lambda (o)   (%instance-ref  o f))
+			   (lambda (o n) (%instance-set! o f n))))))
+		(getters-and-setters
+		 (map (lambda (s)
+			(cons (car s)
+			      (allocator (lambda () '()))))
+		      slots)))
+	   
+	   (slot-set! new 'direct-supers        dsupers)
+	   (slot-set! new 'direct-slots         dslots)
+	   (slot-set! new 'cpl                  cpl)
+	   (slot-set! new 'slots                slots)
+	   (slot-set! new 'n-fields             n-fields)
+	   (slot-set! new 'field-initializers   (reverse
+						 field-initializers))
+	   (slot-set! new 'getters-and-setters  getters-and-setters)
+	   new))
+	((eq? class <generic>)
+	 (let ((new (%allocate-entity class
+				      (length (class-slots class)))))
+	   (slot-set! new 'methods '())
+	   new))
+	((eq? class <method>)
+	 (let ((new (%allocate-instance
+		     class
+		     (length (class-slots class)))))
+	   (slot-set! new
+		      'specializers
+		      (getl initargs :specializers))
+	   (slot-set! new
+		      'procedure
+		      (getl initargs :procedure))
+	   new))))
+
+(define <top> (make <class>
+		:direct-supers (list)
+		:direct-slots  (list)))
+
+(define <object> (make <class>
+		   :direct-supers (list <top>)
+		   :direct-slots  (list)))
+
+
+(slot-set! <class> 'direct-supers      (list <object>))
+(slot-set! <class> 'direct-slots       (map list the-slots-of-a-class))
+(slot-set! <class> 'cpl                (list <class> <object> <top>))
+(slot-set! <class> 'slots              (map list the-slots-of-a-class))
+(slot-set! <class> 'nfields            (length the-slots-of-a-class))
+(slot-set! <class> 'field-initializers (map (lambda (s)
+					      (lambda () '()))
+					    the-slots-of-a-class))
+(slot-set! <class> 'getters-n-setters  '())
+
+
+(define <procedure-class> (make <class>
+			    :direct-supers (list <class>)
+			    :direct-slots  (list)))
+
+(define <entity-class> (make <class>
+			 :direct-supers (list <procedure-class>)
+			 :direct-slots  (list)))
+
+(define <generic> (make <entity-class>
+		    :direct-supers (list <object>)
+		    :direct-slots  (list 'methods)))
+
+(define <method> (make <class>
+		   :direct-supers (list <object>)
+		   :direct-slots  (list 'specializers
+					'procedure)))
+
+;;; Three convenient shortcuts.
+;;;
+(define (make-class direct-supers direct-slots)
+  (make <class>
+    :direct-supers direct-supers
+    :direct-slots  direct-slots))
+
+(define (make-generic)
+  (make <generic>))
+
+(define (make-method specializers procedure)
+  (make <method>
+    :specializers specializers
+    :procedure    procedure))
+
+
+;;; The initialization protocol
+;;;
+(define initialize (make-generic))
+	    
+
+;;; The instance structure protocol.
+;;;
+(define allocate-instance (make-generic))
+(define compute-getter-and-setter (make-generic))
+
+
+;;; The class initialization protocol.
+;;;
+(define compute-cpl (make-generic))
+(define compute-slots (make-generic))
+
+
+;;; The generic invocation protocol.
+;;;
+(define compute-apply-generic (make-generic))
+(define compute-methods (make-generic))
+(define compute-method-more-specific? (make-generic))
+(define compute-apply-methods (make-generic))
+
+
+;;; The next thing to do is bootstrap generic functions.
+;;;
+(define generic-invocation-generics (list compute-apply-generic
+					  compute-methods
+					  compute-method-more-specific?
+					  compute-apply-methods))
+
+(define (add-method generic method)
+  (slot-set! generic
+	     'methods
+	     (cons method
+		   (collect-if
+		    (lambda (m)
+		      (not (every? eq?
+				   (method-specializers m)
+				   (method-specializers method))))
+		    (slot-ref generic 'methods))))
+  (%set-instance-proc! generic (compute-apply-generic generic)))
+
+;
+; Adding a method calls COMPUTE-APPLY-GENERIC, the result of which calls
+; the other generics in the generic invocation protocol.  Two, related,
+; problems come up.  A chicken and egg problem and a infinite regress
+; problem.
+;
+; In order to add our first method to COMPUTE-APPLY-GENERIC, we need
+; something sitting there, so it can be called.  The first definition
+; below does that.
+; 
+; Then, the second definition solves both the infinite regress and the
+; not having enough of the protocol around to build itself problem the
+; same way: it special cases invocation of generics in the invocation
+; protocol.
+;
+;
+(%set-instance-proc! compute-apply-generic
+     (lambda (generic)
+       (let ((method (car (generic-methods generic))))
+	 ((method-procedure method) #f generic))))
+
+(add-method compute-apply-generic
+    (make-method (list <generic>)
+      (lambda (call-next-method generic)
+	(lambda args
+	  (if (and (memq generic generic-invocation-generics)     ;* G  c
+		   (memq (car args) generic-invocation-generics)) ;* r  a
+	      (apply (method-procedure                            ;* o  s
+		      (last (generic-methods generic)))           ;* u  e
+		     (cons #f args))                              ;* n
+	                                                          ;* d
+	      ((compute-apply-methods generic)
+	       ((compute-methods generic) args)
+	       args))))))
+
+
+(add-method compute-methods
+    (make-method (list <generic>)
+      (lambda (call-next-method generic)
+	(lambda (args)
+	  (let ((applicable
+		 (collect-if (lambda (method)
+			       ;
+			       ; Note that every only goes as far as the
+			       ; shortest list!
+			       ;
+			       (every? applicable?
+				       (method-specializers method)
+				       args))
+			     (generic-methods generic))))
+	    (gsort (lambda (m1 m2)
+		     ((compute-method-more-specific? generic)
+		      m1
+		      m2
+		      args))
+		   applicable))))))
+
+
+(add-method compute-method-more-specific?
+    (make-method (list <generic>)
+      (lambda (call-next-method generic)
+	(lambda (m1 m2 args)
+	  (let loop ((specls1 (method-specializers m1))
+		     (specls2 (method-specializers m2))
+		     (args args))
+	    (cond ((and (null? specls1) (null? specls2))
+                   (error
+                     "Two methods are equally specific."))
+                  ((or  (null? specls1) (null? specls2))
+                   (error
+                     "Two methods have a different number of specializers."))
+		  ((null? args)
+		   (error
+                     "Fewer arguments than specializers."))
+		  (else
+		   (let ((c1  (car specls1))
+			 (c2  (car specls2))
+			 (arg (car args)))
+		     (if (eq? c1 c2)
+			 (loop (cdr specls1)
+			       (cdr specls2)
+			       (cdr args))
+			 (more-specific? c1 c2 arg))))))))))
+
+
+(add-method compute-apply-methods
+    (make-method (list <generic>)
+      (lambda (call-next-method generic)
+	(lambda (methods args)
+	  (letrec ((one-step
+		     (lambda (tail)
+		       (lambda ()
+			 (if (null? tail)
+			     (error "No applicable methods/next methods.")
+			     (apply (method-procedure (car tail))
+				    (cons (one-step (cdr tail)) args)))))))
+	    ((one-step methods)))))))
+
+(define applicable?
+    (lambda (c arg)
+      (memq c (class-cpl (class-of arg)))))
+
+(define more-specific?
+    (lambda (c1 c2 arg)
+      (memq c2 (memq c1 (class-cpl (class-of arg))))))
+
+
+
+(add-method initialize
+    (make-method (list <object>)
+      (lambda (call-next-method object initargs) object)))
+
+(add-method initialize
+    (make-method (list <class>)
+      (lambda (call-next-method class initargs)
+	(call-next-method)
+	(slot-set! class
+		   'direct-supers
+		   (getl initargs 'direct-supers '()))
+	(slot-set! class
+		   'direct-slots
+		   (map (lambda (s)
+			  (if (pair? s) s (list s)))
+			(getl initargs 'direct-slots  '())))
+	(slot-set! class 'cpl   (compute-cpl   class))
+	(slot-set! class 'slots (compute-slots class))
+	(let* ((nfields 0)
+	       (field-initializers '())
+	       (allocator
+		(lambda (init)
+		  (let ((f nfields))
+		    (set! nfields (+ nfields 1))
+		    (set! field-initializers
+			  (cons init field-initializers))
+		    (list (lambda (o)   (%instance-ref  o f))
+			  (lambda (o n) (%instance-set! o f n))))))
+	       (getters-and-setters
+		(map (lambda (slot)
+		       (cons (car slot)
+			     (compute-getter-and-setter class
+							slot
+							allocator)))
+		     (slot-ref class 'slots))))
+	  (slot-set! class 'nfields nfields)
+	  (slot-set! class 'field-initializers field-initializers)
+	  (slot-set! class 'getters-and-setters getters-and-setters)))))
+
+(add-method initialize
+    (make-method (list <generic>)
+      (lambda (call-next-method generic initargs)
+	(call-next-method)
+	(slot-set! generic 'methods '())
+	(%set-instance-proc! generic
+			   (lambda args (error "Has no methods."))))))
+
+(add-method initialize
+    (make-method (list <method>)
+      (lambda (call-next-method method initargs)
+	(call-next-method)
+	(slot-set! method 'specializers (getl initargs 'specializers))
+	(slot-set! method 'procedure    (getl initargs 'procedure)))))
+
+
+
+(add-method allocate-instance
+    (make-method (list <class>)
+      (lambda (call-next-method class)
+	(let* ((field-initializers (slot-ref class 'field-initializers))
+	       (new (%allocate-instance
+		      class
+		      (length field-initializers))))
+	  (let loop ((n 0)
+		     (inits field-initializers))
+	    (if (pair? inits)
+		(begin
+		 (%instance-set! new n ((car inits)))
+		 (loop (+ n 1)
+		       (cdr inits)))
+		new))))))
+
+(add-method allocate-instance
+    (make-method (list <entity-class>)
+      (lambda (call-next-method class)
+	(let* ((field-initializers (slot-ref class 'field-initializers))
+	       (new (%allocate-entity
+		      class
+		      (length field-initializers))))
+	  (let loop ((n 0)
+		     (inits field-initializers))
+	    (if (pair? inits)
+		(begin
+		 (%instance-set! new n ((car inits)))
+		 (loop (+ n 1)
+		       (cdr inits)))
+		new))))))
+
+
+(add-method compute-cpl
+    (make-method (list <class>)
+      (lambda (call-next-method class)
+	(compute-std-cpl class class-direct-supers))))
+
+
+(add-method compute-slots
+    (make-method (list <class>)
+      (lambda (call-next-method class)
+	(let collect ((to-process (apply append
+					 (map class-direct-slots
+					      (class-cpl class))))
+		      (result '()))
+	  (if (null? to-process)
+	      (reverse result)
+	      (let* ((current (car to-process))
+		     (name (car current))
+		     (others '())
+		     (remaining-to-process
+		      (collect-if (lambda (o)
+				    (if (eq? (car o) name)
+					(begin
+					 (set! others (cons o others))
+					 #f)
+					#t))
+				  (cdr to-process))))
+		(collect remaining-to-process
+			 (cons (append current
+				       (apply append (map cdr others)))
+			       result))))))))
+
+
+(add-method compute-getter-and-setter
+    (make-method (list <class>)
+      (lambda (call-next-method class slot allocator)
+	(allocator (lambda () '())))))
+
+
+
+;
+; Now everything works, both generic functions and classes, so we can
+; turn on the real MAKE.
+;
+;
+(set! make
+      (lambda (class . initargs)
+	(let ((instance (allocate-instance class)))
+	  (initialize instance initargs)
+	  instance)))
 

@@ -17,14 +17,32 @@
 (define (list . args)
   args)
 
-(define (first list)
-  (car list))
+(define (list* . args)
+  (let chase ((args args))
+    (cond ((null? args) '())
+	  ((null? (cdr args)) (car args))
+	  (else (cons (car args) (chase (cdr args)))))))
 
-(define (second list)
-  (cadr list))
+(define (cddr lst)
+  (cdr (cdr lst)))
 
-(define (rest list)
-  (cdr list))
+(define (first lst)
+  (car lst))
+
+(define (second lst)
+  (cadr lst))
+
+(define (third lst)
+  (cadr (cdr lst)))
+
+(define (fourth lst)
+  (cadr (cddr lst)))
+
+(define (rest lst)
+  (cdr lst))
+
+(define (rest2 lst)
+  (cddr lst))
 
 (define (ass pred object alist)
   (cond ((null? alist)
@@ -37,6 +55,68 @@
 (define (assq object alist)
   (ass eq? object alist))
 
+(define (assv object alist)
+  (ass eqv? object alist))
+
+(define (assoc object alist)
+  (ass equal? object alist))
+
+
+;;; Thie following definitions are taken from Tiny Clos.  They should
+;;; be integrated with a more principled library.
+
+(define (apply* proc . args)
+  (apply proc (apply list* args)))
+
+(define (position-of x lst)
+  (if (eq? x (car lst))
+      0
+      (+ 1 (position-of x (cdr lst)))))
+
+(define (map-append proc . lists)
+  (apply append (apply map (cons proc lists))))
+
+(define (last lst)
+  (if (null? lst)
+      #f
+      (if (null? (cdr lst))
+	  (car lst)
+	  (last (cdr lst)))))
+
+(define (any? test . lists)
+  (let scan ((tails lists))
+    (if (member #t (map null? tails)) ; (any null? tails)
+	#f
+	(or (apply test (map car tails))
+	    (scan (map cdr tails))))))
+
+(define (every? test . lists)
+  (let scan ((tails lists))
+    (if (member #t (map null? tails)) ; (any null? tails)
+	#t
+	(and (apply test (map car tails))
+	     (scan (map cdr tails))))))
+
+(define (remove x list)
+  (cond ((null? list) '())
+	((eq? (car list) x) (cdr list))
+	(else (cons (car list) (remove x (cdr list))))))
+
+(define (getl plist name . not-found)
+  (let scan ((tail plist))
+    (cond ((null? tail)
+	   (if (pair? not-found)
+	       (first not-found)
+	       (error "GETL couldn't find" name)))
+	  ((eq? (first tail) name) (secodn tail))
+	  (else (scan (rest2 tail))))))
+
+
+(define (length list)
+  (if (null? list)
+      0
+      (+ 1 (length (rest list)))))
+
 (define (reverse lst)
   (if (null? lst)
       '()
@@ -48,20 +128,21 @@
       (cons (first lst1)
 	    (append (rest lst1) lst2))))
 
-;;; Simple single-argument map for now.
-(define (map proc arg)
-  (if (null? arg)
-      '()
-      (cons (proc (first arg))
-	    (map proc (rest arg)))))
+(define (map proc . lists)
+  (let chase ((tails lists))
+    (if (any? null? tails)
+	'()
+	(cons (apply proc (map first tails))
+	      (chase proc (rest tails))))))
 
-;;; Simple single-argument for-each for now.
-(define (for-each proc arg)
-  (if (null? arg)
-      (undefined)
-      (begin
-	(proc (first arg))
-	(for-each proc (rest arg)))))
+(define (for-each proc . lists)
+  (let chase ((tails lists))
+    (if (any? null? tails)
+	(undefined)
+	(begin
+	  (apply proc (map first tails))
+	  (chase proc (rest tails))))))
+
 
 ;;; Non-Deterministic Computation
 ;;; =============================
