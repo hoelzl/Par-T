@@ -11,6 +11,9 @@
 (define (undefined)
   'the-undefined-value)
 
+(define (identity x)
+  x)
+
 ;;; Function Calling
 ;;; ================
 
@@ -53,6 +56,14 @@
 (define (rest2 lst)
   (cddr lst))
 
+(define (last lst)
+  (if (null? lst)
+      #f
+      (if (null? (cdr lst))
+	  (car lst)
+	  (last (cdr lst)))))
+
+
 (define (ass pred object alist)
   (cond ((null? alist)
 	 #f)
@@ -75,33 +86,58 @@
 ;;; be integrated with a more principled library.
 
 (define (position-of x lst)
-  (if (eq? x (car lst))
-      0
-      (+ 1 (position-of x (cdr lst)))))
+  (let scan ((count 0)
+	     (tail lst))
+    (cond ((null? tail)
+	   #f)
+	  ((eq? x (car tail))
+	   count)
+	  (else
+	   (scan (+ count 1) (cdr tail))))))
 
-(define (map-append proc . lists)
-  (apply append (apply map (cons proc lists))))
+;;; Two helper procedures for the implementation of mapping functions.
+;;;
+(define (any-null? lst)
+  (cond ((null? lst) #f)
+	((null? (car lst)) #t)
+	(else (any-null? (cdr lst)))))
 
-(define (last lst)
+(define (map1 proc lst)
   (if (null? lst)
-      #f
-      (if (null? (cdr lst))
-	  (car lst)
-	  (last (cdr lst)))))
+      '()
+      (cons (proc (car lst)) (map1 proc (cdr lst)))))
+
 
 (define (any? test . lists)
   (let scan ((tails lists))
-    (if (member #t (map null? tails)) ; (any null? tails)
+    (if (or (null? tails)
+	    (any-null? tails))
 	#f
-	(or (apply test (map car tails))
-	    (scan (map cdr tails))))))
+	(or (%apply test (map1 car tails))
+	    (scan (map1 cdr tails))))))
 
 (define (every? test . lists)
   (let scan ((tails lists))
-    (if (member #t (map null? tails)) ; (any null? tails)
+    (if (or (null? tails)
+	    (any-null? tails))
 	#t
-	(and (apply test (map car tails))
-	     (scan (map cdr tails))))))
+	(and (%apply test (map1 car tails))
+	     (scan (map1 cdr tails))))))
+
+(define (map proc . lists)
+  (let chase ((tails lists))
+    (if (any-null? tails)
+	'()
+	(cons (%apply proc (map1 first tails))
+	      (chase (map1 rest tails))))))
+
+(define (for-each proc . lists)
+  (let chase ((tails lists))
+    (if (any-null? tails)
+	(undefined)
+	(begin
+	  (apply proc (map1 first tails))
+	  (chase (map1 rest tails))))))
 
 (define (remove x list)
   (cond ((null? list) '())
@@ -117,7 +153,6 @@
 	  ((eq? (first tail) name) (secodn tail))
 	  (else (scan (rest2 tail))))))
 
-
 (define (length list)
   (if (null? list)
       0
@@ -131,23 +166,11 @@
 (define (append lst1 lst2)
   (if (null? lst1)
       lst2
-      (cons (first lst1)
-	    (append (rest lst1) lst2))))
+      (cons (car lst1)
+	    (append (cdr lst1) lst2))))
 
-(define (map proc . lists)
-  (let chase ((tails lists))
-    (if (any? null? tails)
-	'()
-	(cons (apply proc (map first tails))
-	      (chase proc (rest tails))))))
-
-(define (for-each proc . lists)
-  (let chase ((tails lists))
-    (if (any? null? tails)
-	(undefined)
-	(begin
-	  (apply proc (map first tails))
-	  (chase proc (rest tails))))))
+(define (map-append proc . lists)
+  (apply append (apply map (cons proc lists))))
 
 
 ;;; Non-Deterministic Computation

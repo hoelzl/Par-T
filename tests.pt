@@ -110,25 +110,8 @@
     (and (eqv? 5 (add-2 3))
 	 (eqv? 6 (add-3 3)))))
 
-(define (test-list*)
-  (let ((result (list* 1 2 '(3 4))))
-    (and (eq? '() (list*))
-	 (eqv? 1 (first result))
-	 (eqv? 2 (second result))
-	 (eqv? 3 (third result))
-	 (eqv? 4 (fourth result)))))
-
-(define (test-assq)
-  (let ((alist '((a . 1) (b . 2) (c . 3))))
-    (and (pair? (assq 'a alist))
-	 (eq? 'a (car (assq 'a alist)))
-	 (eq? 1 (cdr (assq 'a alist)))
-	 (eq? 'b (car (assq 'b alist)))
-	 (eq? 2 (cdr (assq 'b alist)))
-	 (eq? 'c (car (assq 'c alist)))
-	 (eq? 3 (cdr (assq 'c alist)))
-	 (eq? #f (assq 'x alist))
-	 (eq? #f (assq 1 alist)))))
+;;; Tests for the standard library
+;;; ==============================
 
 (define (test-apply-01)
   (and (eq? (apply list) '())
@@ -147,9 +130,87 @@
 	 (eqv? (third result) 3))))
 
 
+(define (test-list*)
+  (let ((result (list* 1 2 '(3 4))))
+    (and (eq? '() (list*))
+	 (eqv? 1 (first result))
+	 (eqv? 2 (second result))
+	 (eqv? 3 (third result))
+	 (eqv? 4 (fourth result)))))
+
+(define (test-last)
+  (and (eq? (last '()) #f)
+       (eq? (last '(a)) 'a)
+       (eq? (last '(a b)) 'b)))
+	    
+
+(define (test-assq)
+  (let ((alist '((a . 1) (b . 2) (c . 3))))
+    (and (pair? (assq 'a alist))
+	 (eq? 'a (car (assq 'a alist)))
+	 (eq? 1 (cdr (assq 'a alist)))
+	 (eq? 'b (car (assq 'b alist)))
+	 (eq? 2 (cdr (assq 'b alist)))
+	 (eq? 'c (car (assq 'c alist)))
+	 (eq? 3 (cdr (assq 'c alist)))
+	 (eq? #f (assq 'x alist))
+	 (eq? #f (assq 1 alist)))))
+
+(define (test-position-of)
+  (let ((lst '(a b c d)))
+    (and (= (position-of 'a lst) 0)
+	 (= (position-of 'b lst) 1)
+	 (= (position-of 'c lst) 2)
+	 (= (position-of 'd lst) 3)
+	 (eq? #f (position-of 'e lst)))))
+
+(define (test-any?-01)
+  (not (any? identity '())))
+
+(define (test-any?-02)
+  (and (not (any? identity '(#f)))
+       (any? identity '(#t))))
+
+(define (test-map-01)
+  (eq? (map (lambda (x) (+ x 1)) '()) '()))
+
+(define (test-map-02)
+  (let ((result (map (lambda (x) (+ x 1)) '(1 2 3))))
+    (and (= (length result) 3)
+	 (= (first result) 2)
+	 (= (second result) 3)
+	 (= (third result) 4))))
+
+(define (test-map-03)
+  (let ((result (map + '(1 2 3) '(3 2 1))))
+    (and (= (length result) 3)
+	 (= (first result) 4)
+	 (= (second result) 4)
+	 (= (third result) 4))))
+
+
+(define (test-map-append)
+  (let* ((lst '((1 2) (3 4)))
+	 (result (map-append (lambda (x)
+			       (map (lambda (y) (+ 1 y)) x))
+			     lst)))
+    (and (= 4 (length result))
+	 (= 2 (first result))
+	 (= 3 (second result))
+	 (= 4 (third result))
+	 (= 5 (fourth result)))))
+
+
+;;; Tests for the object system
+;;; ===========================
+
 (define (class-<class>-test)
   (and (%instance? <class>)
        (eq? <class> (%instance-class <class>))))
+
+
+;;; Test Suites
+;;; ===========
 
 (define (boolean-tests)
   (display "Testing booleans")
@@ -180,11 +241,19 @@
 (define (standard-library-tests)
   (display "Testing standard library")
   (newline)
-  (write (list (test-list*)
-	       (test-assq)
-	       (test-apply-01)
+  (write (list (test-apply-01)
 	       (test-apply-02)
 	       (test-apply-03)
+	       (test-list*)
+	       (test-last)
+	       (test-assq)
+	       (test-position-of)
+	       (test-any?-01)
+	       (test-any?-02)
+	       (test-map-01)
+	       (test-map-02)
+	       (test-map-03)
+	       (test-map-append)
 	       ))
   (newline))
 

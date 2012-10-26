@@ -622,6 +622,10 @@
     (defconstant eof "EoF")))
 (defun eof-object? (x) (eq x eof))
 (defvar *par-t-readtable* (copy-readtable))
+;; To restore the original readtable once we have set it to *PAR-T-READTABLE*
+;; (for testing purposes).  Copy the readtable in case we accidentially modify
+;; it.
+(defvar *cl-readtable* (copy-readtable))
 
 (defun par-t-read (&optional (stream *standard-input*))
   (let ((*readtable* *par-t-readtable*))

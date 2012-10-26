@@ -95,8 +95,12 @@
 	     (cond ((eq indicator 'global-val)
 		    (push value stack))
 		   (t
-		    (machine-error "Unbound global variable ~A."
-				   (arg1 instr))))))
+		    (machine-error "Unbound global variable ~A.~%  ~
+                                    Function: ~A:~%  ~
+                                    Stack: ~:W"
+				   (arg1 instr)
+				   (ignore-errors (fn-name f))
+				   stack)))))
 	  (GSET
 	   (setf (get (arg1 instr) 'global-val) (top stack)))
 	  (POP
