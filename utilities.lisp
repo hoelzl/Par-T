@@ -183,6 +183,9 @@
 (defun %instance-class (obj)
   (pt-object-class obj))
 
+(defun %instance-class-setter (new-class obj)
+  (setf (pt-object-class obj) new-class))
+
 (defun %instance-proc (obj)
   (pt-entity-proc obj))
 
@@ -267,8 +270,9 @@
     (%instance-proc 1 %instance-proc nil nil)
     (%instance? 1 %instancep nil nil)
     (%instance-ref 2 %instance-ref nil nil)
-    (%instance-setter 3 %instance-setter nil t)
-    (%instance-proc-setter 3 %instance-proc-setter nil t)
+    (%instance-setter! 3 %instance-setter nil t)
+    (%instance-class-setter! 3 %instance-class-setter nil t)
+    (%instance-proc-setter! 3 %instance-proc-setter nil t)
 
     ;; Reading and writing
     (read 0 par-t-read nil t)

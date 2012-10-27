@@ -107,7 +107,7 @@
 	      (cdr slots)
 	      (cons (list (car slots)
 			  (lambda (o)   (%instance-ref  o index))
-			  (lambda (n o) (%instance-setter n o index)))
+			  (lambda (n o) (%instance-setter! n o index)))
 		    result)))))
 
 ;;; The bootstrap version of `make'.
@@ -143,7 +143,7 @@
 		     (set! field-initializers
 			   (cons init field-initializers))
 		     (list (lambda (o)   (%instance-ref  o f))
-			   (lambda (n o) (%instance-setter n o f))))))
+			   (lambda (n o) (%instance-setter! n o f))))))
 		(getters-and-setters
 		 (map (lambda (s)
 			(cons (car s)
@@ -343,7 +343,7 @@
 				   (method-specializers m)
 				   (method-specializers method))))
 		    (slot-ref generic 'methods))))
-  (%instance-proc-setter (compute-apply-generic generic) generic))
+  (%instance-proc-setter! (compute-apply-generic generic) generic))
 
 
 ; Adding a method calls COMPUTE-APPLY-GENERIC, the result of which calls
@@ -360,12 +360,12 @@
 ; same way: it special cases invocation of generics in the invocation
 ; protocol.
 
-(%instance-proc-setter (lambda (generic)
-			 ;; (display "compute-apply-generic #f")
-			 ;; (newline)
-			 (let ((method (car (generic-methods generic))))
-			   ((method-procedure method) #f generic)))
-		       compute-apply-generic)
+(%instance-proc-setter! (lambda (generic)
+			  ;; (display "compute-apply-generic #f")
+			  ;; (newline)
+			  (let ((method (car (generic-methods generic))))
+			    ((method-procedure method) #f generic)))
+			compute-apply-generic)
 
 (add-method compute-apply-generic
   (make-method (list <generic>)
@@ -501,7 +501,7 @@
 		  (set! field-initializers
 			(cons init field-initializers))
 		  (list (lambda (o)   (%instance-ref  o f))
-			(lambda (n o) (%instance-setter n o f))))))
+			(lambda (n o) (%instance-setter! n o f))))))
 	     (getters-and-setters
 	      (map (lambda (slot)
 		     (cons (car slot)
@@ -520,8 +520,8 @@
       ;; (newline)
       (call-next-method)
       (slot-set! generic 'methods '())
-      (%instance-proc-setter (lambda args (error "Has no methods."))
-			     generic))))
+      (%instance-proc-setter! (lambda args (error "Has no methods."))
+			      generic))))
 
 (add-method initialize
   (make-method (list <method>)
@@ -544,7 +544,7 @@
 		   (inits field-initializers))
 	  (if (pair? inits)
 	      (begin
-		(%instance-setter ((car inits)) new n)
+		(%instance-setter! ((car inits)) new n)
 		(loop (+ n 1)
 		      (cdr inits)))
 	      new))))))
@@ -560,7 +560,7 @@
 		   (inits field-initializers))
 	  (if (pair? inits)
 	      (begin
-		(%instance-setter ((car inits)) new n)
+		(%instance-setter! ((car inits)) new n)
 		(loop (+ n 1)
 		      (cdr inits)))
 	      new))))))

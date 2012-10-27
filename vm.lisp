@@ -215,7 +215,10 @@
 		PAR-T-NUMBERP PAR-T-VECTORP PAR-T-CHARACTERP PAR-T-STRINGP
 		;; TODO: Streams or ports.
 		%INSTANCE-CLASS %INSTANCE-PROC %INSTANCEP
-		COMPILER DISPLAY PAR-T-WRITE RANDOM GENSYM) 
+		DISPLAY PAR-T-WRITE
+		;; These three should not really be opcodes.
+		COMPILER
+		RANDOM GENSYM) 
 	   (push (funcall (opcode instr) (pop stack)) stack))
 	  
 	  ;; Binary operations:
@@ -235,16 +238,18 @@
 			     (rest3 stack))))
 	  
 	  ;; Constants:
-	  ((par-t-true)
+	  ((PAR-T-TRUE)
 	   (push *true* stack))
 
-	  ((par-t-false)
+	  ((PAR-T-FALSE)
 	   (push *false* stack))
 
 	  ((-1 0 1 2)
 	   (push (opcode instr) stack))
 	  
 	  ;; Other:
-	  ((HALT) (RETURN (top stack)))
+	  ((HALT)
+	   (RETURN (top stack)))
+
 	  (otherwise (error "Unknown opcode: ~a" instr)))))))
 
