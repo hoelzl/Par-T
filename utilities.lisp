@@ -72,8 +72,47 @@
 ;;; The definition of a function for the VM.
 ;;; ---------------------------------------
 
+(defun print-fn (fn &optional (stream *standard-output*) depth)
+  (declare (ignore depth))
+  (print-unreadable-object (fn stream :type t)
+    (format stream "~A" (or (fn-name fn) '??))))
+
 (defstruct (fn (:print-function print-fn))
   code (env nil) (name nil) (args nil))
+
+;;; Locales
+;;; -------
+
+(defun print-locale (locale &optional (stream *standard-output*) depth)
+  (declare (ignore depth))
+  (print-unreadable-object (locale stream :type t :identity t)
+    (format stream "~A" (locale-identifier locale))))
+
+(defstruct (locale (:print-function print-locale))
+  identifier
+  (bindings (make-hash-table))
+  (superior-locale nil))
+
+(defvar *top-level-locale* (make-locale :identifier :top-level-locale))
+
+(defun top-level-locale ()
+  *top-level-locale*)
+
+(defun (setf top-level-locale) (new-locale)
+  (setf *top-level-locale* new-locale))
+
+(defun get-var-in-locale (var &optional (locale *top-level-locale*) (default nil))
+  (multiple-value-bind (value presentp)
+      (gethash var (locale-bindings locale) default)
+    (cond (presentp
+           (values value presentp))
+          ((locale-superior-locale locale)
+           (get-var-in-locale var (locale-superior-locale locale) default))
+          (t
+           (values default nil)))))
+
+(defun (setf get-var-in-locale) (new-value var &optional (locale *top-level-locale*))
+  (setf (gethash var (locale-bindings locale)) new-value))
 
 ;;; Primitives known by the VM.
 ;;; --------------------------

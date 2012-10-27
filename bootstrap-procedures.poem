@@ -3,9 +3,6 @@
 ;;; List Manipulation
 ;;; =================
 
-(lset! list (lambda args args))
-(name! list 'list)
-
 (lset! assq
        (lambda (object alist)
 	 (if (null? alist) #f
@@ -13,6 +10,9 @@
 		 (car alist)
 		 (assq object (cdr alist))))))
 (name! assq 'assq)
+
+(lset! list (lambda args args))
+(name! list 'list)
 
 (lset! map1 
        (lambda (proc lst)

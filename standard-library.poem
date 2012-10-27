@@ -1,11 +1,5 @@
 (herald "Par-T-Standard-Library")
 
-;;; Define this when we have a better continuation handling.
-(define (error . args)
-  (write args)
-  (newline)
-  args)
-
 (define else #t)
 
 (define (undefined)
@@ -13,6 +7,12 @@
 
 (define (identity x)
   x)
+
+;;; What should a better version of this do?
+(define (error . args)
+  (write args)
+  (newline)
+  args)
 
 ;;; Macro Expansion
 ;;; ===============

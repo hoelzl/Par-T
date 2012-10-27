@@ -19,7 +19,8 @@
 (in-package :parallel-thetis)
 
 (defun set-global-var! (var val)
-  (setf (get var 'global-val) val))
+  (setf (get-var-in-locale var (top-level-locale))
+        val))
 
 ;;; ==============================
 
@@ -96,10 +97,6 @@
 
 ;;; This should probably go into init-par-t-comp
 (set-global-var! 'name! #'name!)
-
-(defun print-fn (fn &optional (stream *standard-output*) depth)
-  (declare (ignore depth))
-  (format stream "{~a}" (or (fn-name fn) '??)))
 
 (defun label-p (x) "Is x a label?" (atom x))
 
@@ -452,7 +449,7 @@
 
   ;; Primitive functions
   (dolist (prim *primitive-fns*)
-     (setf (get (prim-symbol prim) 'global-val)
+     (setf (get-var-in-locale (prim-symbol prim) (top-level-locale))
            (new-fn :name (prim-symbol prim)
                    :code (seq (gen 'PRIM (prim-opcode prim))
                               (gen 'RETURN))))))
@@ -476,7 +473,8 @@
   "A compiled Par-T read-eval-print loop"
   (init-par-t-comp)
   (let ((par-t-code (compiler *par-t-top-level*)))
-    (machine par-t-code par-t-code)))
+    (machine par-t-code :locale (top-level-locale)
+                        :error-fun par-t-code)))
 
 (defun comp-go (exp)
   "Compile and execute the expression."

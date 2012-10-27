@@ -29,10 +29,15 @@
 (defvar *trace-par-t-vm* nil)
 (defvar *trace-par-t-global-loads* nil)
 
-(defun machine (f &optional (error-fun *error-fun*))
+(defun machine (f &key (locale (top-level-locale))
+                       (error-fun *error-fun*))
   "Run the abstract machine on the code for f."
-  (declare (optimize (debug 3)))
-  (assert (fn-p error-fun) () "The error function has to be a function object.")
+  ;; We might allow funcallable instances for consistency.  But probably it's
+  ;; not worth the effort.
+  (assert (fn-p f) ()
+          "The function given to MACHINE must be a function object.")
+  (assert (fn-p error-fun) ()
+          "The error function has to be a function object.")
   (let* ((code (fn-code f))
          (pc 0)
          (env nil)
@@ -92,9 +97,9 @@
 	   (setf (elt (elt env (arg1 instr)) (arg2 instr))
 		 (top stack)))
 	  (GVAR 
-	   (multiple-value-bind (indicator value)
-	       (get-properties (symbol-plist (arg1 instr)) '(global-val))
-	     (cond ((eq indicator 'global-val)
+           (multiple-value-bind (value presentp)
+               (get-var-in-locale (arg1 instr) locale)
+	     (cond (presentp
 		    (when *trace-par-t-global-loads*
 		      (format *trace-output*
 			      "~&>>> PT: accessing ~A~%" (arg1 instr)))
@@ -107,7 +112,8 @@
 				   (ignore-errors (fn-name f))
 				   stack)))))
 	  (GSET
-	   (setf (get (arg1 instr) 'global-val) (top stack)))
+	   (setf (get-var-in-locale (arg1 instr) locale)
+                 (top stack)))
 	  (POP
 	   (pop stack))
 	  (CONST
