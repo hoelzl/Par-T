@@ -472,9 +472,11 @@
 (defun par-t ()
   "A compiled Par-T read-eval-print loop"
   (init-par-t-comp)
-  (let ((par-t-code (compiler *par-t-top-level*)))
-    (machine par-t-code :locale (top-level-locale)
-                        :error-fun par-t-code)))
+  (let* ((par-t-code (compiler *par-t-top-level*))
+         (state (make-vm-state :fun par-t-code
+                               :code (fn-code par-t-code)
+                               :error-fun par-t-code)))
+    (machine state :locale (top-level-locale))))
 
 (defun comp-go (exp)
   "Compile and execute the expression."
