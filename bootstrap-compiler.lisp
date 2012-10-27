@@ -543,7 +543,7 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (unless (boundp 'eof)
     (defconstant eof "EoF")))
-(defun eof-object? (x) (eq x eof))
+(defun eof-object-p (x) (eq x eof))
 (defvar *par-t-readtable* (copy-readtable))
 ;; To restore the original readtable once we have set it to *PAR-T-READTABLE*
 ;; (for testing purposes).  Copy the readtable in case we accidentially modify
@@ -602,7 +602,7 @@
   (let ((result '()))
     (with-open-file (stream file-name :direction :input)
       (do ((form (par-t-read stream) (par-t-read stream)))
-	  ((eof-object? form) (nreverse result))
+	  ((eof-object-p form) (nreverse result))
         (when *trace-par-t-reader*
           (format *trace-output*
                   "~&Reading: ~:W~%" form)

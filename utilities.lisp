@@ -274,18 +274,9 @@
     (%instance-class-setter! 3 %instance-class-setter nil t)
     (%instance-proc-setter! 3 %instance-proc-setter nil t)
 
-    ;; Reading and writing
-    (read 0 par-t-read nil t)
-    (eof-object? 1 eof-object? nil nil)
-    (write 1 par-t-write nil t)
-    (display 1 display nil t)
-    (newline 0 newline nil t)
-
     ;; Misc stuff
     (compiler 1 compiler t nil) 
-    (name! 2 name! true t)
-    (gensym 1 gensym true t)
-    (random 1 random true nil)))
+    (name! 2 name! true t)))
   
 
 (defun primitive-p (f env n-args)

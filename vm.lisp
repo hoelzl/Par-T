@@ -210,6 +210,7 @@
 		 stack))
 	  
 	  ;; Nullary operations:
+	  #+(or)
 	  ((PAR-T-READ NEWLINE) 
 	   (push (funcall (opcode instr)) stack))
 	  
@@ -219,10 +220,7 @@
 		PAR-T-NUMBERP PAR-T-VECTORP PAR-T-CHARACTERP PAR-T-STRINGP
 		;; TODO: Streams or ports.
 		%INSTANCE-CLASS %INSTANCE-PROC %INSTANCEP
-		DISPLAY PAR-T-WRITE
-		;; These three should not really be opcodes.
-		COMPILER
-		RANDOM GENSYM) 
+		COMPILER) 
 	   (push (funcall (opcode instr) (pop stack)) stack))
 	  
 	  ;; Binary operations:

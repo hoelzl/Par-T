@@ -28,6 +28,40 @@
 	     (cons (car lst1) (append2 (cdr lst1) lst2)))))
 (name! append2 'append2)
 
+(lset! as-par-t-boolean
+       (lambda (lisp-boolean)
+	 (lisp-call 'as-par-t-boolean
+		    (list lisp-boolean))))
+
+(lset! read
+       (lambda ()
+	 (lisp-call 'par-t-read '())))
+
+(lset! write
+       (lambda (obj)
+	 (lisp-call 'par-t-write (list obj))))
+
+(lset! display
+       (lambda (obj)
+	 (lisp-call 'display (list obj))))
+
+(lset! newline
+       (lambda ()
+	 (lisp-call 'newline '())))
+
+(lset! random
+       (lambda (obj)
+	 (lisp-call 'random (list obj))))
+
+(lset! eof-object?
+       (lambda (obj)
+	 (as-par-t-boolean
+	  (lisp-call 'eof-object-p (list obj)))))
+
+(lset! gensym
+       (lambda (prefix)
+	 (lisp-call 'gensym (list prefix))))
+
 ;;; Evaluation
 ;;; ==========
 
