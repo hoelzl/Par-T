@@ -441,10 +441,19 @@
 		    (LVAR 0 0 ";" title)
 		    (RETURN))))
 
+  ;; Lisp functions
+  (set-global-var! 'lisp-call
+    (new-fn :name 'lisp-call :args '(function args)
+            :code '((ARGS 2)
+                    (LVAR 0 1 ";" args)
+                    (LVAR 0 0 ";" name)
+                    (LISP-CALL)
+                    (RETURN))))
+
   ;; Primitive functions
   (dolist (prim *primitive-fns*)
      (setf (get (prim-symbol prim) 'global-val)
-           (new-fn :env nil :name (prim-symbol prim)
+           (new-fn :name (prim-symbol prim)
                    :code (seq (gen 'PRIM (prim-opcode prim))
                               (gen 'RETURN))))))
 

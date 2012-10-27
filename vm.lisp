@@ -186,13 +186,17 @@
 			  :args (fn-args (arg1 instr))
 			  :env env) 
 		 stack))
+
+	  (LISP-CALL
+	   (let ((fun (fdefinition (pop stack)))
+		 (args (pop stack)))
+	     (push (apply fun args) stack)))
 	  (PRIM
 	   (let ((fun (fdefinition (arg1 instr)))
 		 (args '()))
 	     (dotimes (i n-args)
 	       (push (pop stack) args))
-	   (push (apply fun args)
-		 stack)))
+	     (push (apply fun args) stack)))
 	  
 	  ;; Continuation instructions:
 	  (SET-CC
