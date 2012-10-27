@@ -6,6 +6,11 @@
 ;;; We can't use any macros here, because we are bootstrapping the
 ;;; macro system.  So there's no `define', `let', `and', etc.
 
+;;; Initial definition to avoid undefined global variable errors.
+;;; This will be overwritten by the initial definition of
+;;; `define-macro'.
+(lset! *par-t-macros* '())
+
 (lset! par-t-macro
        (lambda (symbol)
 	 (if (symbol? symbol)
