@@ -1,4 +1,4 @@
-(herald "The Par-T-Standard-Library")
+(herald "Par-T-Standard-Library")
 
 ;;; Define this when we have a better continuation handling.
 (define (error . args)
@@ -14,6 +14,17 @@
 (define (identity x)
   x)
 
+;;; Macro Expansion
+;;; ===============
+
+;; (define (macro-expand-1 exp)
+;;   (if (pair? exp)
+;;       (let ((expander (par-t-macro (first exp))))
+;; 	(if expander
+;; 	    (apply expander (rest exp))
+;; 	    exp))
+;;       exp))
+
 ;;; Function Calling
 ;;; ================
 
@@ -26,8 +37,10 @@
 ;;; List Functions
 ;;; ==============
 
-(define (list . args)
-  args)
+(define (list? obj)
+  (or (null? obj) (pair? obj)))
+
+;;; `list' is defined in file `macros.pt'
 
 (define (list* . args)
   (let chase ((args args))
@@ -84,7 +97,9 @@
 	 (car lst))
 	(else
 	 (list-ref (cdr lst) (- n 1)))))
-      
+
+(define (starts-with lst thing)
+  (eqv? (first lst) thing))
 
 (define (rest lst)
   (cdr lst))
@@ -108,8 +123,9 @@
 	(else 
 	 (ass pred object (rest alist)))))
 
-(define (assq object alist)
-  (ass eq? object alist))
+;;; `assq' is already defined as a bootstrap procedure.
+;; (define (assq object alist)
+;;   (ass eq? object alist))
 
 (define (assv object alist)
   (ass eqv? object alist))
@@ -206,11 +222,7 @@
 	((null? (car lst)) #t)
 	(else (any-null? (cdr lst)))))
 
-(define (map1 proc lst)
-  (if (null? lst)
-      '()
-      (cons (proc (car lst)) (map1 proc (cdr lst)))))
-
+;;; `map1' is defined in `macros.pt' since it is needed for `let'.
 
 (define (any? test . lists)
   (let scan ((tails lists))
@@ -265,17 +277,16 @@
 	result
 	(scan (rest tail) (+ result 1)))))
 
+(define (length=1 lst)
+  (and (pair? lst)
+       (null (cdr lst))))
+
 (define (reverse lst)
   (let scan ((tail lst)
 	     (result '()))
     (if (null? tail)
 	result
 	(scan (cdr tail) (cons (car tail) result)))))
-
-(define (append2 lst1 lst2)
-  (if (null? lst1)
-      lst2
-      (cons (car lst1) (append2 (cdr lst1) lst2))))
 
 (define (append . lists)
   (cond ((null? lists)

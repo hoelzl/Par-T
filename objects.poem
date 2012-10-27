@@ -1,4 +1,4 @@
-(herald "The Par-T object system" 'print-banner #f)
+(herald "Par-T object system")
 
 ;;; Topological Sort and Class-Precedence-List Computation
 ;;; ======================================================

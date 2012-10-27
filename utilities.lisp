@@ -288,6 +288,7 @@
     ;; Misc stuff
     (compiler 1 compiler t nil) 
     (name! 2 name! true t)
+    (gensym 1 gensym true t)
     (random 1 random true nil)))
   
 

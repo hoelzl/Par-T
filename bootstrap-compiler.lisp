@@ -21,127 +21,33 @@
 (defun set-global-var! (var val)
   (setf (get var 'global-val) val))
 
-#+(or)
-(defun get-global-var (var)
-  (let* ((default "unbound")
-         (val (get var 'global-val default)))
-    (if (eq val default)
-        (error "Unbound par-t variable: ~a" var)
-        val)))
-
 ;;; ==============================
 
-(defun par-t-macro (symbol)
-  (and (symbolp symbol) (get symbol 'par-t-macro)))
+(defparameter *par-t-macros* '())
 
-(defmacro define-par-t-macro (name parmlist &body body)
-  "Define a Par-T macro."
-  `(setf (get ',name 'par-t-macro)
-         #'(lambda ,parmlist .,body)))
+(defun make-par-t-call-1 (fun arg)
+  (new-fn
+   :code `((ARGS 0)
+           (SAVE L1)
+           (CONST ,arg)
+           (GVAR ,fun)
+           (CALLJ 1)
+           L1
+           (GVAR EXIT)
+           (CALLJ 1))))
 
-(defun par-t-macro-expand (x)
+(defun par-t-macro-p (symbol)
+  (not (eq *false*
+           (machine (make-par-t-call-1 'par-t-macro symbol)))))
+
+(defun par-t-macro-expand (exp)
   "Macro-expand this Par-T expression."
-  (if (and (listp x) (par-t-macro (first x)))
-      (par-t-macro-expand
-        (apply (par-t-macro (first x)) (rest x)))
-      x))
+  (let ((result (machine (make-par-t-call-1 'macro-expand exp))))
+    result))
 
-(defun par-t-macro-expand-1 (x)
+(defun par-t-macro-expand-1 (exp)
   "Macro-expand this Par-T expression once."
-  (if (and (listp x) (par-t-macro (first x)))
-      (apply (par-t-macro (first x)) (rest x))
-      x))
-
-;;; ==============================
-
-;;; TODO: We need a way to define new setters as macros.
-(defparameter *setters*
-  '((car . car-setter!)
-    (cdr . cdr-setter!)))
-
-(define-par-t-macro set! (place value)
-  (if (symbolp place)
-      `(lset! ,place ,value)
-      (let ((setter (cdr (assoc (first place) *setters*))))
-	(if setter
-	    ;; If a setter exists, generate a direct call.
-	    `(,setter ,value ,@(rest place))
-	    ;; Otherwise call the generic function `setter' to allow
-	    ;; dispatch on the car.
-	    `((setter ,(car place)) ,value ,@(rest place))))))
-
-(define-par-t-macro let (bindings &rest body)
-  (if (symbolp bindings)
-      (let ((fun bindings)
-            (bindings (first body))
-            (body (rest body)))
-        `(letrec ((,fun (lambda ,(mapcar #'first bindings)
-                        ,@body)))
-            (,fun ,@(mapcar #'second bindings))))
-      `((lambda ,(mapcar #'first bindings) . ,body)
-        ,@(mapcar #'second bindings))))
-
-(define-par-t-macro let* (bindings &rest body)
-  (if (null bindings)
-      `(begin .,body)
-      `(let (,(first bindings))
-         (let* ,(rest bindings) . ,body))))
-
-(define-par-t-macro and (&rest args)
-  (cond ((null args) *true*)
-        ((length=1 args) (first args))
-        (t `(if ,(first args)
-                (and . ,(rest args))))))
-
-(define-par-t-macro or (&rest args)
-  (cond ((null args) *false*)
-        ((length=1 args) (first args))
-        (t (let ((var (gensym)))
-             `(let ((,var ,(first args)))
-                (if ,var ,var (or . ,(rest args))))))))
-
-(define-par-t-macro cond (&rest clauses)
-  (cond ((null clauses) *false*)
-        ((length=1 (first clauses))
-         `(or ,(first clauses) (cond .,(rest clauses))))
-        ((starts-with (first clauses) 'else)
-         `(begin .,(rest (first clauses))))
-        (t `(if ,(first (first clauses))
-                (begin .,(rest (first clauses)))
-                (cond .,(rest clauses))))))
-
-(define-par-t-macro case (key &rest clauses)
-  (let ((key-val (gensym "KEY")))
-    `(let ((,key-val ,key))
-       (cond ,@(mapcar
-                #'(lambda (clause)
-                    (if (starts-with clause 'else)
-                        clause
-                        `((member ,key-val ',(first clause))
-                          .,(rest clause))))
-                clauses)))))
-
-#+(or)
-(define-par-t-macro define (name &rest body)
-  (if (atom name)
-      `(begin (lset! ,name . ,body) ',name)
-      `(define ,(first name) 
-         (lambda ,(rest name) . ,body))))
-
-(define-par-t-macro define (name &rest body)
-  (if (atom name)
-      `(name! (lset! ,name . ,body) ',name)
-      (par-t-macro-expand
-         `(define ,(first name) 
-            (lambda ,(rest name) . ,body)))))
-
-(define-par-t-macro delay (computation)
-  `(lambda () ,computation))
-
-(define-par-t-macro letrec (bindings &rest body)
-  `(let ,(mapcar #'(lambda (v) (list (first v) *false*)) bindings)
-     ,@(mapcar #'(lambda (v) `(lset! .,v)) bindings)
-     ,@body))
+  (machine (make-par-t-call-1 'macro-expand-1 exp)))
 
 ;;; ==============================
 
@@ -208,11 +114,12 @@
 
 (defun comp (x env val? more?)
   "Compile the expression x into a list of instructions"
+  (declare (optimize debug))
     (cond
       ((par-t-boolean-p x) (comp-const x val? more?))
       ((symbolp x) (comp-var x env val? more?))
       ((atom x) (comp-const x val? more?))
-      ((par-t-macro (first x)) (comp (par-t-macro-expand x) env val? more?))
+      ((par-t-macro-p (first x)) (comp (par-t-macro-expand x) env val? more?))
       ((case (first x)
          (QUOTE  (arg-count x 1)
                  (comp-const (second x) val? more?))
@@ -470,6 +377,13 @@
   (set-global-var! 'true *true*)
   (set-global-var! 'false *false*)
 
+  ;; Temporary definition needed for bootstrapping the compiler.
+  (set-global-var! 'par-t-macro
+    (new-fn :name 'par-t-macro :args '(symbol)
+            :code '((ARGS 1)
+                    (PAR-T-FALSE)
+                    (RETURN))))
+
   ;; Applying functions
   (let ((%%apply (new-fn :name '%%apply :args '(proc length lst)
                          :code '((ARGS 3)
@@ -673,8 +587,6 @@
 
 ;;; ==============================
 
-;(setf (par-t-macro 'quasiquote) 'quasi-q)
-
 (defun quasi-q (x)
   "Expand a quasiquote form into append, list, and cons calls."
   (cond
@@ -727,16 +639,22 @@
 
 (defun par-t-system-file (name)
   (merge-pathnames
-   (make-pathname :name name :type "pt")
+   (make-pathname :name name :type "poem")
    (directory-namestring (asdf:system-source-file :par-t))))
 
 (defun load-par-t-standard-library ()
-  (let ((stdlib (par-t-system-file "standard-library"))
+  (let ((bootstrap-procs (par-t-system-file "bootstrap-procedures"))
+        (macro-expander (par-t-system-file "macro-expander"))
+        (macros (par-t-system-file "macros"))
+        (stdlib (par-t-system-file "standard-library"))
         (object-system (par-t-system-file "objects")))
     (flet ((print-herald (list)
              (format t "Loading ~A~%" (first list))
              (format t "Defined ~:W~%" (rest list))
              (force-output)))
+      (print-herald (load-par-t-file bootstrap-procs))
+      (print-herald (load-par-t-file macro-expander))
+      (print-herald (load-par-t-file macros))
       (print-herald (load-par-t-file stdlib))
       (print-herald (load-par-t-file object-system)))))
 
@@ -759,3 +677,5 @@
 ;;; compiler in the toplevel.
 
 (init-par-t-comp)
+(load-par-t-standard-library)
+

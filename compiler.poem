@@ -13,18 +13,3 @@
 	(set! *global-vars*
 	      (cons (cons var val) *global-vars*)))))
 
-
-;;; Handling of Par-T macros in Par-T
-;;; =================================
-
-(define *par-t-macros* '())
-
-(define-macro define-macro (name args . body)
-  (let ((macro-binding (assoc name *par-t-macros*)))
-    (if macro-binding
-	(set! (cdr macro-binding)
-	      (compiler `(lambda ,args . ,body)))
-	(set! *par-t-macros*
-	      (cons (cons name (compiler `(lambda ,args . , body)))
-		    *par-t-macros*)))))
-

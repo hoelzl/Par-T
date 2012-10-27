@@ -1,0 +1,53 @@
+(herald "Macro Expander")
+
+;;; Handling of Par-T macros in Par-T
+;;; =================================
+
+;;; We can't use any macros here, because we are bootstrapping the
+;;; macro system.  So there's no `define', `let', `and', etc.
+
+(lset! par-t-macro
+       (lambda (symbol)
+	 (if (symbol? symbol)
+	     ((lambda (binding)
+		(if binding (cdr binding) #f))
+	      (assq symbol *par-t-macros*))
+	     #f)))
+(name! par-t-macro 'par-t-macro)
+
+;; (define-macro define-macro (name args . body)
+;;   (let ((macro-binding (assq name *par-t-macros*)))
+;;     (if macro-binding
+;; 	(set! (cdr macro-binding)
+;; 	      (compiler `(lambda ,args . ,body)))
+;; 	(set! *par-t-macros*
+;; 	      (cons (cons name (compiler `(lambda ,args . , body)))
+;; 		    *par-t-macros*)))))
+
+(lset! %define-macro
+       (lambda (name args . body)
+	 ((lambda (macro-binding)
+	    (if macro-binding
+		(cdr-setter! (eval (cons 'lambda  (cons args body)))
+			     macro-binding)
+		(lset! *par-t-macros*
+		       (cons (cons name (eval (cons 'lambda (cons args body))))
+			     *par-t-macros*))))
+	  (assq name *par-t-macros*))
+	 (list 'quote name)))
+(name! %define-macro '%define-macro)
+(lset! *par-t-macros*
+       (list (cons 'define-macro %define-macro)))
+
+(lset! macro-expand
+       (lambda (exp)
+	 (if (pair? exp) 
+	     ((lambda (expander)
+		(if expander
+		    (macro-expand (%apply expander (cdr exp)))
+		    exp))
+	      (par-t-macro (car exp)))
+	     exp)))
+(name! macro-expand 'macro-expand)
+
+

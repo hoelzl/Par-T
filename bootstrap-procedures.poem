@@ -1,0 +1,106 @@
+(herald "Bootstrap Procedures")
+
+;;; List Manipulation
+;;; =================
+
+(lset! list (lambda args args))
+(name! list 'list)
+
+(lset! assq
+       (lambda (object alist)
+	 (if (null? alist) #f
+	     (if (eq? object (car (car alist)))
+		 (car alist)
+		 (assq object (cdr alist))))))
+(name! assq 'assq)
+
+(lset! map1 
+       (lambda (proc lst)
+	 (if (null? lst)
+	     '()
+	     (cons (proc (car lst)) (map1 proc (cdr lst))))))
+(name! map1 'map1)
+
+(lset! append2 
+       (lambda (lst1 lst2)
+	 (if (null? lst1)
+	     lst2
+	     (cons (car lst1) (append2 (cdr lst1) lst2)))))
+(name! append2 'append2)
+
+;;; Evaluation
+;;; ==========
+
+(lset! eval
+       (lambda (form)
+	 ((compiler form))))
+(name! eval 'eval)
+
+(lset! constant?
+       (lambda (form)
+	 (if (number? form)
+	     #t
+	     (if (string? form)
+		 #t
+		 (if (pair? form)
+		     (eq? (car form) 'quote)
+		     #f)))))
+(name! constant? 'constant?)
+
+;;; Quasiquotation
+;;; ==============
+
+(lset! combine-non-constant-quasiquote
+       (lambda (left right form)
+	 (if (null? right)
+	     (list 'list left)
+	     (if (pair? right)
+		 (if (eq? (car right) 'list)
+		     (cons 'list (cons left (cdr right)))
+		     (list 'cons left right))
+		 (list 'cons left  right)))))
+(name! combine-non-constant-quasiquote
+       'combine-non-constant-quasiquote)
+
+(lset! combine-quasiquote
+       (lambda (left right form)
+	 (if (constant? left)
+	     (if (constant? right)
+		 (if (eq? (eval left) (car form))
+		     (if (eq? (eval right) (cdr form))
+			 (list 'quote form)
+			 (list 'quote (cons (eval left) (eval right))))
+		     (list 'quote (cons (eval left) (eval right))))
+		 (combine-non-constant-quasiquote left right form))
+	     (combine-non-constant-quasiquote left right form))))
+(name! combine-quasiquote 'combine-quasiquote)
+
+(lset! expand-quasiquote
+       (lambda (form)
+	 (if (null? form)
+	     '()
+	     (if (pair? form)
+		 (if (eq? (car form) 'unquote)
+		     ;; (assert (and (cdr form) (null? (cddr form))))
+		     (cadr form)
+		     (if (eq? (car form) 'quasiquote)
+			 (expand-quasiquote (expand-quasiquote (cadr form)))
+			 (if (pair? (car form))
+			     (if (eq? (car (car form)) 'unquote-splicing)
+				 (if (null? (cdr form))
+				     (cadr (car form))
+				     (list 'append2
+					   (cadr (car form))
+					   (expand-quasiquote (cdr form))))
+				 (combine-quasiquote (expand-quasiquote (car form))
+						     (expand-quasiquote (cdr form))
+						     form))
+			     (combine-quasiquote (expand-quasiquote (car form))
+						 (expand-quasiquote (cdr form))
+						 form))))
+		 ;; Not a pair.
+		 ;; Case for vectors should go here
+		 (if (constant? form)
+		     form
+		     (list 'quote form))))))
+(name! expand-quasiquote 'expand-quasiquote)

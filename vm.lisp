@@ -66,7 +66,7 @@
 			      pc 0
 			      n-args call-n-args)))
 		     (t
-		      (machine-error "Trying to call an unknown function: ~:W." f))))
+		      (machine-error "Trying to call an unknown function: ~:W." fun))))
 	     (print-trace-information ()
 	       (when *trace-par-t-vm*
 		 (format *trace-output* "~&Starting VM iteration:~%")
@@ -223,7 +223,7 @@
 		;; TODO: Streams or ports.
 		LIST1
 		%INSTANCE-CLASS %INSTANCE-PROC %INSTANCEP
-		COMPILER DISPLAY PAR-T-WRITE RANDOM) 
+		COMPILER DISPLAY PAR-T-WRITE RANDOM GENSYM) 
 	   (push (funcall (opcode instr) (pop stack)) stack))
 	  
 	  ;; Binary operations:

@@ -1,0 +1,101 @@
+(herald "Macros for the Par-T System")
+
+;;; This would be quite a bit simpler if we had real syntax
+;;; environments.  Alas these will only be available after the
+;;; compiler has been bootstrapped in Poem.  So we need to avoid
+;;; macros that have not been defined yet in the earlier macros.
+;;; OK, here we go...
+
+(define-macro quasiquote (object)
+  (expand-quasiquote  object))
+
+(define-macro let (bindings . body)
+  (if (symbol? bindings)
+      ((lambda (fun bindings body)
+	 `(letrec ((,fun (lambda ,(map1 car bindings)
+			   ,@body)))
+	    (,fun ,@(map1 cadr bindings))))
+       bindings (car body) (cdr body))
+      `((lambda ,(map1 car bindings) ,@body)
+        ,@(map1 cadr bindings))))
+
+;;; TODO: We need a way to define new setters as macros.
+(lset! *setters*
+       '((car . car-setter!)
+	 (cdr . cdr-setter!)))
+
+(define-macro set! (place value)
+  (if (symbol? place)
+      `(lset! ,place ,value)
+      (let ((setter (cdr (assq (car place) *setters*))))
+	(if setter
+	    ;; If a setter exists, generate a direct call.
+	    `(,setter ,value ,@(cdr place))
+	    ;; Otherwise call the generic function `setter' to allow
+	    ;; dispatch on the car.
+	    `((setter ,(car place)) ,value ,@(cdr place))))))
+
+(define-macro let* (bindings . body)
+  (if (null? bindings)
+      `(begin ,@body)
+      `(let (,(car bindings))
+         (let* ,(cdr bindings) ,@body))))
+
+(define-macro letrec (bindings . body)
+  `(let ,(map1 (lambda (v) (list (car v) #f)) bindings)
+     ,@(map1 (lambda (v) `(lset! ,@v)) bindings)
+     ,@body))
+
+(define-macro and args
+  (if (null? args) #t
+      (if (null? (cdr args)) (car args)
+	  `(if ,(car args)
+	       (and ,@(cdr args))))))
+
+(define-macro or args
+  (if (null? args)
+      #f
+      (if (null? (cdr args))
+	  (car args)
+	  (let ((var (gensym "var")))
+	    `(let ((,var ,(car args)))
+	       (if ,var ,var (or ,@(cdr args))))))))
+
+;; TODO: This needs to handle clauses consisting of a single form
+;; better, e.g., (cond ((f x)))
+(define-macro cond clauses
+  (if (null? clauses) #f
+      (if (null? (cdr (car clauses)))
+	  `(or ,(car clauses) (cond ,@(cdr clauses)))
+	  (if (eq? (car (car clauses)) 'else)
+	      `(begin ,@(cdr (car clauses)))
+	      `(if ,(car (car clauses))
+		   (begin ,@(cdr (car clauses)))
+		   (cond ,@(cdr clauses)))))))
+
+(define-macro case (key . clauses)
+  (let ((key-val (gensym "key")))
+    `(let ((,key-val ,key))
+       (cond ,@(map1
+                (lambda (clause)
+                    (if (starts-with clause 'else)
+                        clause
+                        `((member ,key-val ',(car clause))
+                          ,@(cdr clause))))
+                clauses)))))
+
+(define-macro define (name . body)
+  (if (symbol? name)
+      `(name! (lset! ,name ,@body) ',name)
+      (macro-expand
+       `(define ,(car name) 
+	  (lambda ,(cdr name) ,@body)))))
+
+;;; TODO: This is wrong if computation has side effects (which should
+;;; only be evaluated once, so we need to store the result of the
+;;; computation after computing it for the first time.)
+(define-macro delay (computation)
+  `(lambda () ,computation))
+
+;;; Yay!  We have a usable language up and running at this point.  Now
+;;; we can continue to implement the standard library.
