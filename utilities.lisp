@@ -259,12 +259,6 @@
     (cdr 1 cdr nil nil)
     (cdr-setter! 2 cdr-setter nil nil)
     (cadr 1 cadr nil nil) 
-    #+(or)
-    (list 1 list1 true nil)
-    #+(or)
-    (list 2 list2 true nil)
-    #+(or)
-    (list 3 list3 true nil)
 
     ;; Instance handling for the object system
     (%allocate-instance 2 %allocate-instance true nil)

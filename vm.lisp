@@ -155,8 +155,8 @@
 	     (set-up-call fun (arg1 instr))))
 	  (CALLJV
 	   ;; Set the active function to the function object on the
-	   ;; stack and the number of arguments to the next object on
-	   ;; the stack.
+	   ;; stack and the number of arguments to the second object
+	   ;; on the stack.
 	   (let* ((fun (pop stack))
 		  (call-n-args (pop stack)))
 	     (set-up-call fun call-n-args)))
@@ -214,14 +214,13 @@
 		PAR-T-CONSP PAR-T-BOOLEANP PAR-T-SYMBOLP PAR-T-FN-P 
 		PAR-T-NUMBERP PAR-T-VECTORP PAR-T-CHARACTERP PAR-T-STRINGP
 		;; TODO: Streams or ports.
-		LIST1
 		%INSTANCE-CLASS %INSTANCE-PROC %INSTANCEP
 		COMPILER DISPLAY PAR-T-WRITE RANDOM GENSYM) 
 	   (push (funcall (opcode instr) (pop stack)) stack))
 	  
 	  ;; Binary operations:
 	  ((+ - * / PAR-T-< PAR-T-> PAR-T-<= PAR-T->= PAR-T-/= PAR-T-=
-	      CONS LIST2 CAR-SETTER CDR-SETTER
+	      CONS CAR-SETTER CDR-SETTER
 	      %ALLOCATE-INSTANCE %ALLOCATE-ENTITY
 	      %INSTANCE-REF
 	      NAME! PAR-T-EQ PAR-T-EQUAL PAR-T-EQL)
@@ -230,8 +229,7 @@
 			     (rest2 stack))))
 	  
 	  ;; Ternary operations:
-	  ((LIST3
-	    %INSTANCE-SETTER %INSTANCE-PROC-SETTER)
+	  ((%INSTANCE-SETTER %INSTANCE-PROC-SETTER)
 	   (setf stack (cons (funcall (opcode instr) (third stack)
 				      (second stack) (first stack))
 			     (rest3 stack))))
