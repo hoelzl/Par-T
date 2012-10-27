@@ -149,18 +149,11 @@
 		   ;; (warn "Returning from top level?")
 		   (return-from machine (first stack)))))
 	  (CALLJ
-	   ;; First, discard the environment of the currently active
-	   ;; function.  Is this really necessary?  In the success
-	   ;; case we overwrite the value of `env' anyway with the
-	   ;; function environment. --tc
-	   (pop env)
 	   ;; Set the active function to the function object on the
 	   ;; stack.
 	   (let ((fun (pop stack)))
 	     (set-up-call fun (arg1 instr))))
 	  (CALLJV
-	   ;; See CALLJ. --tc
-	   (pop env)
 	   ;; Set the active function to the function object on the
 	   ;; stack and the number of arguments to the next object on
 	   ;; the stack.
