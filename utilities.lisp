@@ -45,8 +45,6 @@
 ;;; The Boolean values.
 ;;; ------------------
 
-;;; These should probably be constants for efficiency reasons.
-
 (defstruct par-t-boolean)
 
 (defstruct (par-t-true
