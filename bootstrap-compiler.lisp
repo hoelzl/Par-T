@@ -39,16 +39,16 @@
 
 (defun par-t-macro-p (symbol)
   (not (eq *false*
-           (machine (make-par-t-call-1 'par-t-macro symbol)))))
+           (run (make-par-t-call-1 'par-t-macro symbol)))))
 
 (defun par-t-macro-expand (exp)
   "Macro-expand this Par-T expression."
-  (let ((result (machine (make-par-t-call-1 'macro-expand exp))))
+  (let ((result (run (make-par-t-call-1 'macro-expand exp))))
     result))
 
 (defun par-t-macro-expand-1 (exp)
   "Macro-expand this Par-T expression once."
-  (machine (make-par-t-call-1 'macro-expand-1 exp)))
+  (run (make-par-t-call-1 'macro-expand-1 exp)))
 
 ;;; ==============================
 
@@ -403,7 +403,7 @@
                                  EXIT
                                  (LVAR 0 1 ";" length)
                                  (LVAR 0 0 ";" proc)
-                                 (CALLJV)))))
+                                 (CALLJ-VARARGS)))))
     (set-global-var! '%apply
       (new-fn :name '%apply :args '(proc lst)
               :env (list (vector %%apply))
@@ -473,14 +473,13 @@
   "A compiled Par-T read-eval-print loop"
   (init-par-t-comp)
   (let* ((par-t-code (compiler *par-t-top-level*))
-         (state (make-vm-state :fun par-t-code
-                               :code (fn-code par-t-code)
-                               :error-fun par-t-code)))
-    (machine state :locale (top-level-locale))))
+         (state (make-thread-state :fun par-t-code
+                                   :code (fn-code par-t-code))))
+    (run state :locale (top-level-locale))))
 
 (defun comp-go (exp)
   "Compile and execute the expression."
-  (machine (compiler `(exit ,exp))))
+  (run (compiler `(exit ,exp))))
 
 ;;;; Peephole Optimize-Bytecoder
 
