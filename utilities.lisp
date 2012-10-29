@@ -303,7 +303,8 @@
     (cadr 1 cadr nil nil) 
 
     ;; Threads
-    (spawn 2 spawn-thread true t)
+    (thread 0 current-thread nil nil)
+    (spawn 3 spawn-thread true t)
 
     ;; Instance handling for the object system
     (%allocate-instance 2 %allocate-instance true nil)

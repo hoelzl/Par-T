@@ -381,6 +381,13 @@
                     (PAR-T-FALSE)
                     (RETURN))))
 
+  ;;; Getting the current thread
+  (set-global-var! 'current-thread
+    (new-fn :name 'current-thread :args '()
+            :code '((ARGS 0)
+                    (THREAD)
+                    (RETURN))))
+
   ;; Applying functions
   (let ((%%apply (new-fn :name '%%apply :args '(proc length lst)
                          :code '((ARGS 3)

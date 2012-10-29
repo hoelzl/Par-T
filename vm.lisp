@@ -24,6 +24,28 @@
 ;;; Support for threads
 ;;; ===================
 
+(defun print-thread-state (state stream depth)
+  (declare (ignore depth))
+  ;; This is necessary, since threads may appear on the stack, and they
+  ;; contain references to their states, which contain references to the
+  ;; stack, and threads may appear on the stack, and ...
+  (let ((*print-circle* t))
+    (print-unreadable-object (state stream :type t :identity t)
+      (format stream "~%  Fn:~10T~A~%  Code:~10T~:W~%  ~
+                        Pc:~10T~A~%  Env:~10T~:W~%  ~
+                        Stack:~10T~:W~%  Locale:~10T~A~%  ~
+                        #Args:~10T~A~%  Instr:~10T~A~%  ~
+                        Thread:~10T~A"
+              (thread-state-fn state)
+              (thread-state-code state)
+              (thread-state-pc state)
+              (thread-state-env state)
+              (thread-state-stack state)
+              (locale-identifier (thread-state-locale state))
+              (thread-state-n-args state)
+              (thread-state-instr state)
+              (thread-id (thread-state-thread state))))))
+
 ;;; The state of a single thread running on the VM.  This might be directly
 ;;; integrated into the VM, but having it in its own class gives us the
 ;;; possibility to easily add different kinds of threads (e.g., compiled to
@@ -31,7 +53,8 @@
 ;;;
 (defstruct (thread-state (:constructor
                              %make-thread-state
-                             (fn code pc env stack locale n-args instr)))
+                             (fn code pc env stack locale n-args instr thread))
+                         (:print-function print-thread-state))
   (fn nil :type (or fn pt-entity))
   (code nil)
   (pc 0 :type (integer 0))
@@ -39,15 +62,35 @@
   (stack '())
   (locale (top-level-locale))
   (n-args 0 :type (integer 0))
-  (instr nil))
+  (instr nil)
+  (thread nil))
 
 (defun make-thread-state (&key fn code (pc 0) env stack (locale (top-level-locale))
-                               (n-args 0) instr)
+                               (n-args 0) instr thread)
   (assert fn (fn)
           "Cannot create a thread-state without function.")
   (unless code
     (setf code (fn-code fn)))
-  (%make-thread-state fn code pc env stack locale n-args instr))
+  (%make-thread-state fn code pc env stack locale n-args instr thread))
+
+(defun print-thread (thread stream depth)
+  (declare (ignore depth))
+  (print-unreadable-object (thread stream :type t :identity t)
+    (format stream "~A~%  ~:W"
+            (thread-id thread)
+            (thread-state thread))))
+
+(defgeneric thread-group (threadlike)
+  (:documentation
+   "Returns the thread group of a thread or state.")
+  (:method ((state thread-state))
+    (thread-group (thread-state-thread state))))
+
+(defgeneric (setf thread-group) (new-group threadlike)
+  (:documentation
+   "Sets the thread group of a thread or state.")
+  (:method (new-group (state thread-state))
+    (setf (thread-group (thread-state-thread state)) new-group)))
 
 ;;; A thread, i.e., a single thread of execution.  This subsumes what SCEL
 ;;; calls process, but it is more general, since threads can optionally share
@@ -56,14 +99,18 @@
 ;;; 
 (defstruct (thread (:constructor
                        %make-thread
-                       (id state group blockedp priority weight detached-p)))
+                       (id parent %group blockedp priority weight detached-p))
+                   (:print-function print-thread))
   ;; A unique identifier for this thread.
   (id (gensym "THREAD-"))
   ;; The THREAD-STATE for this thread.  If we ever introduce threads that can
   ;; run on a different kind of VM this slot should be moved to a subclass.
   (state nil :type (or null thread-state))
+  ;; The THREAD that spawned this thread, or NIL if it is detached or a
+  ;; top-level thread.
+  (parent nil :type (or null thread))
   ;; The THREAD-GROUP to which this thread belongs.
-  (group nil :type (or null thread-group))
+  (%group nil :type (or null thread-group))
   ;; NIL if this thread can currently execute, true if it is blocked.  Blocked
   ;; threads should set this field to a data structure that allows the
   ;; scheduler to test whether the thread has become executable again.
@@ -83,18 +130,26 @@
   ;; The result of the thread.  Only meaningful if completed-p is true.
   (result nil))
 
+(defmethod thread-group ((thread thread))
+  (thread-%group thread))
+(defmethod (setf thread-group) (new-group (thread thread))
+  ;; TODO: Should probably at least warn when overwriting an existing thread
+  ;; group?
+  (setf (thread-%group thread) new-group))
+
+(defun print-thread-group (group stream depth)
+  (declare (ignore depth))
+  (print-unreadable-object (group stream :type t :identity t)
+    (format stream "~A ~A"
+            (thread-id (thread-group-main-thread group))
+            (mapcar 'thread-id (thread-group-threads group)))))
+
 ;;; A group of threads, controlled by a single scheduler.
 ;;; 
 (defstruct (thread-group (:constructor
                              %make-thread-group
                              (main-thread threads scheduler scheduler-info))
-                         (:print-function
-                          (lambda (group stream depth)
-                            (declare (ignore depth))
-                            (print-unreadable-object (group stream :type t :identity t)
-                              (format stream "~A ~A"
-                                      (thread-id (thread-group-main-thread group))
-                                      (mapcar 'thread-id (thread-group-threads group)))))))
+                         (:print-function print-thread-group))
   ;; The main thread of this group.  This is the thread whose result is
   ;; returned by the VM and also the thread whose end is responsible for
   ;; quitting the VM.  The MAIN-THREAD must also be included in THREADS.
@@ -174,29 +229,29 @@ THREAD-GROUP."))
 
 (defun make-thread (&key (id (gensym "THREAD-"))
                          (fn nil)
-                         (state nil)
+                         (parent nil)
                          (group nil)
                          (blockedp nil)
                          (priority 0)
                          (detached-p nil))
-  (when fn
-    (if state
-        (assert (eql fn (thread-state-fn state)) ()
-                "FN argument and function of STATE differ.")
-        (setf state (make-thread-state :fn fn))))
-  (let ((result (%make-thread id state group blockedp
-                              priority priority detached-p)))
+  (when (eql parent *false*)
+    (setf parent nil))
+  (let ((result (%make-thread id parent group blockedp priority priority detached-p)))
     (unless group
       (setf group
-            (make-thread-group :main-thread result
-                               :threads (list result)))
+            (if parent
+                (thread-group parent)
+                (make-thread-group :main-thread result
+                                   :threads (list result))))
       (setf (thread-group result) group))
+    (setf (thread-state result)
+          (make-thread-state :fn fn :thread result))
     (schedule-new-thread (thread-group-scheduler group) group result)
     result))
 
-(defun spawn-thread (fn args)
+(defun spawn-thread (fn parent args)
   "The function called by the VM to spawn a new thread."
-  (apply #'make-thread :fn fn args))
+  (apply #'make-thread :fn fn :parent parent args))
 
 ;;; Utility Functions
 ;;; =================
@@ -308,6 +363,9 @@ Returns four values:
       (CONST
        (push (arg1 (thread-state-instr state)) (thread-state-stack state))
        (values t nil nil 'cost))
+      (THREAD
+       (push (thread-state-thread state) (thread-state-stack state))
+       (values t nil nil 'thread))
       
       ;; Branching instructions:
       (JUMP
@@ -420,16 +478,6 @@ Returns four values:
          (push (apply fun args) (thread-state-stack state)))
        (values t nil nil 'prim))
 
-
-      ;; Thread handling
-      #+or
-      (SPAWN
-       (let ((fn (pop (thread-state-stack state)))
-             (args (pop (thread-state-stack state))))
-         (push (apply 'make-thread :state (make-thread-state :fn fn) args)
-               (thread-state-stack state)))
-       (values t nil nil 'spawn))
-      
       ;; Continuation instructions:
       (SET-CC
        (setf (thread-state-stack state)
@@ -467,7 +515,6 @@ Returns four values:
           CONS CAR-SETTER CDR-SETTER
           %ALLOCATE-INSTANCE %ALLOCATE-ENTITY
           %INSTANCE-REF
-          SPAWN-THREAD
           NAME! PAR-T-EQ PAR-T-EQUAL PAR-T-EQL)
        (let ((stack (thread-state-stack state)))
          (setf (thread-state-stack state)
@@ -476,7 +523,8 @@ Returns four values:
        (values t nil nil opcode))
       
       ;; Ternary operations:
-      ((%INSTANCE-SETTER %INSTANCE-PROC-SETTER)
+      ((%INSTANCE-SETTER %INSTANCE-PROC-SETTER
+                         SPAWN-THREAD)
        (let ((stack (thread-state-stack state))
              (opcode (opcode (thread-state-instr state))))
          (setf (thread-state-stack state)
@@ -529,8 +577,7 @@ Returns four values:
 (defgeneric run (executable &key locale ticks)
   (:method ((fn fn) &key (locale (top-level-locale))
                          (ticks *default-thread-time-slice*))
-    (run (make-thread-state :fn fn
-                            :code (fn-code fn))
+    (run (make-thread :fn fn)
          :locale locale
          :ticks ticks))
 
@@ -551,5 +598,5 @@ Returns four values:
     (multiple-value-bind (exit-status value)
         (run-thread state :locale locale :ticks ticks)
       (if (eq exit-status :time-slice-exhausted)
-          (run state :locale locale :ticks ticks)
+          (run (thread-group state) :locale locale :ticks ticks)
           value))))
