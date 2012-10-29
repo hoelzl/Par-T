@@ -24,35 +24,173 @@
 ;;; Support for threads
 ;;; ===================
 
-(defstruct (thread-state)
-  (fun nil :type (or fn pt-entity))
+;;; The state of a single thread running on the VM.  This might be directly
+;;; integrated into the VM, but having it in its own class gives us the
+;;; possibility to easily add different kinds of threads (e.g., compiled to
+;;; native code or Lua).
+;;;
+(defstruct (thread-state (:constructor
+                             %make-thread-state
+                             (fn code pc env stack locale n-args instr)))
+  (fn nil :type (or fn pt-entity))
   (code nil)
   (pc 0 :type (integer 0))
   (env '())
   (stack '())
+  (locale (top-level-locale))
   (n-args 0 :type (integer 0))
   (instr nil))
 
-(defstruct (thread (:constructor %make-thread (id state priority weight)))
+(defun make-thread-state (&key fn code (pc 0) env stack (locale (top-level-locale))
+                               (n-args 0) instr)
+  (assert fn (fn)
+          "Cannot create a thread-state without function.")
+  (unless code
+    (setf code (fn-code fn)))
+  (%make-thread-state fn code pc env stack locale n-args instr))
+
+;;; A thread, i.e., a single thread of execution.  This subsumes what SCEL
+;;; calls process, but it is more general, since threads can optionally share
+;;; their locales and so be more similar to threads with shared state that to
+;;; processes.
+;;; 
+(defstruct (thread (:constructor
+                       %make-thread
+                       (id state group blockedp priority weight detached-p)))
+  ;; A unique identifier for this thread.
   (id (gensym "THREAD-"))
-  (state)
-  (priority)
+  ;; The THREAD-STATE for this thread.  If we ever introduce threads that can
+  ;; run on a different kind of VM this slot should be moved to a subclass.
+  (state nil :type (or null thread-state))
+  ;; The THREAD-GROUP to which this thread belongs.
+  (group nil :type (or null thread-group))
+  ;; NIL if this thread can currently execute, true if it is blocked.  Blocked
+  ;; threads should set this field to a data structure that allows the
+  ;; scheduler to test whether the thread has become executable again.
+  ;; Details how this is supposed to work will be worked out later.
+  (blockedp nil)
+  ;; The priority.  Threads withi higher priority should be preferred by the
+  ;; scheduler to ones with lower priority.
+  (priority 0 :type integer)
   ;; Weight is initially the priority, but can be changed by the scheduler for
   ;; to implement scheduling strategies.
-  (weight))
+  (weight 0 :type integer)
+  ;; If true, the thread can be immediately collected after it has terminated
+  ;; because nobody can wait for it.
+  (detached-p nil :type (or null thread))
+  ;; True if the thread has finished executing.
+  (completed-p nil :type boolean)
+  ;; The result of the thread.  Only meaningful if completed-p is true.
+  (result nil))
+
+;;; A group of threads, controlled by a single scheduler.
+;;; 
+(defstruct (thread-group (:constructor
+                             %make-thread-group
+                             (main-thread threads scheduler scheduler-info)))
+  ;; The main thread of this group.  This is the thread whose result is
+  ;; returned by the VM and also the thread whose end is responsible for
+  ;; quitting the VM.  The MAIN-THREAD must also be included in THREADS.
+  main-thread
+  ;; The threads in this group
+  threads
+  ;; The scheduler responsible for scheduling threads in this group
+  scheduler
+  ;; Data needed by the scheduler to make scheduling decisions.  Its precise
+  ;; format depends on the scheduler.
+  scheduler-info)
+
+;;; Schedulers
+;;; ----------
+
+(defvar *default-thread-time-slice* most-positive-fixnum)
+
+(defgeneric schedule (scheduler thread-group)
+  (:documentation
+   "Returns the THREAD of THREAD-GROUP that should be run in the next time
+   slice and, as second value, the number of ticks the thread should run."))
+
+(defgeneric initialize-scheduler (scheduler thread-group)
+  (:documentation
+   "Called before SCHEDULE is called for the first time on SCHEDULER; the main
+purpose is to allow the scheduler to set up the SCHEDULER-INFO slot in
+THREAD-GROUP."))
+
+(defgeneric new-thread (scheduler thread-group new-thread)
+  (:documentation
+   "Called when NEW-THREAD is spawned for THREAD-GROUP."))
+
+(defclass round-robin-scheduler ()
+  ())
+
+(defmethod schedule ((self round-robin-scheduler) (group thread-group))
+  (let* ((index (thread-group-scheduler-info group))
+         (thread (nth index (thread-group-threads group)))
+         (ticks *default-thread-time-slice*))
+    (cond (thread
+           (incf (thread-group-scheduler-info group))
+           (values thread ticks))
+          ((null (thread-group-threads group))
+           (error "No threads in group ~A." group))
+          (t
+           (let ((threads (thread-group-threads group)))
+             (if (null (cdr threads))
+                 (setf (thread-group-scheduler-info group) 0)
+                 (setf (thread-group-scheduler-info group) 1))
+             (values (first threads) ticks))))))
+
+(defmethod initialize-scheduler ((self round-robin-scheduler) (group thread-group))
+  (setf (thread-group-scheduler-info group) 0))
+
+(defmethod new-thread ((scheduler round-robin-scheduler)
+                       (group thread-group)
+                       (new-thread thread))
+  (setf (thread-group-threads group)
+        (append (thread-group-threads group)
+                (list new-thread))))
+                                    
+                                 
+
+;;; Constructors
+;;; ------------
+
+(defun make-thread-group (&key main-thread threads scheduler scheduler-info)
+  (when (and main-thread (not threads))
+    (setf threads (list main-thread)))
+  (cond ((not scheduler)
+         (setf scheduler (make-instance 'round-robin-scheduler)))
+        ((symbolp scheduler)
+         (setf scheduler (make-instance scheduler))))
+  (let ((result (%make-thread-group main-thread threads scheduler scheduler-info)))
+    (initialize-scheduler scheduler result)
+    result))
 
 (defun make-thread (&key (id (gensym "THREAD-"))
+                         (fn nil)
                          (state nil)
-                         (priority nil))
-  (%make-thread id state priority priority))
-
+                         (group nil)
+                         (blockedp nil)
+                         (priority 0)
+                         (detached-p nil))
+  (when fn
+    (if state
+        (assert (eql fn (thread-state-fn state)) ()
+                "FN argument and function of STATE differ.")
+        (setf state (make-thread-state :fn fn))))
+  (let ((result (%make-thread id state group blockedp
+                              priority priority detached-p)))
+    (unless group
+      (setf group
+            (make-thread-group :main-thread result
+                               :threads (list result))))
+    result))
 
 ;;; Utility Functions
 ;;; =================
 
 (defun set-up-call (state fun call-n-args)
   (cond ((fn-p fun)
-         (setf (thread-state-fun state) fun
+         (setf (thread-state-fn state) fun
                (thread-state-code state) (fn-code fun)
                (thread-state-pc state) 0
                (thread-state-env state) (fn-env fun)
@@ -66,7 +204,7 @@
                           nil 
                           (list 'bad-entity-call fun real-fun)))
                  (t
-                  (setf (thread-state-fun state) real-fun
+                  (setf (thread-state-fn state) real-fun
                         (thread-state-code state) (fn-code real-fun)
                         (thread-state-pc state) 0
                         (thread-state-env state) (fn-env real-fun)
@@ -79,7 +217,7 @@
   (when *trace-par-t-vm*
     (format *trace-output* "~&Starting VM iteration:~%")
     (format *trace-output* "  Function:~15T~A~%"
-            (fn-name (thread-state-fun state)))
+            (fn-name (thread-state-fn state)))
     (format *trace-output* "  Program Counter:~15T~D~%"
             (thread-state-pc state))
     (format *trace-output* "  Instruction:~15T~:W~%"
@@ -174,7 +312,7 @@ Returns four values:
       ;; Function call/return instructions:
       (SAVE
        (push (make-ret-addr :pc (arg1 (thread-state-instr state))
-                            :fn (thread-state-fun state)
+                            :fn (thread-state-fn state)
                             :env (thread-state-env state))
              (thread-state-stack state))
        (values t nil nil 'save))
@@ -185,7 +323,7 @@ Returns four values:
                (ret-addr (second stack)))
           (cond ((and ret-addr (ret-addr-p ret-addr))
                  (let ((fun (ret-addr-fn ret-addr)))
-                   (setf (thread-state-fun state) fun
+                   (setf (thread-state-fn state) fun
                          (thread-state-code state) (fn-code fun)
                          (thread-state-pc state) (ret-addr-pc ret-addr)
                          (thread-state-env state) (ret-addr-env ret-addr)))
@@ -268,6 +406,15 @@ Returns four values:
            (push (pop (thread-state-stack state)) args))
          (push (apply fun args) (thread-state-stack state)))
        (values t nil nil 'prim))
+
+
+      ;; Thread handling
+      (SPAWN
+       (let ((fn (pop (thread-state-stack state)))
+             (args (pop (thread-state-stack state))))
+         (push (apply 'make-thread :state (make-thread-state :fn fn) args)
+               (thread-state-stack state)))
+       (values t nil nil 'spawn))
       
       ;; Continuation instructions:
       (SET-CC
@@ -347,8 +494,6 @@ Returns four values:
 ;;; Running a Single Thread 
 ;;; =======================
 
-(defvar *default-thread-time-slice* most-positive-fixnum)
-
 (defun run-thread (state &key (locale (top-level-locale))
                               (ticks *default-thread-time-slice*))
   "Run the abstract machine on the code for f."
@@ -366,18 +511,30 @@ Returns four values:
             (error "Runtime error: ~A~%  State: ~:W" reason state)
             (return-from run-thread (values :done value)))))))
 
-(defgeneric run (executable &key locale)
-  (:method ((fn fn) &key (locale (top-level-locale)))
-    (run (make-thread-state :fun fn
+(defgeneric run (executable &key locale ticks)
+  (:method ((fn fn) &key (locale (top-level-locale))
+                         (ticks *default-thread-time-slice*))
+    (run (make-thread-state :fn fn
                             :code (fn-code fn))
-         :locale locale))
+         :locale locale
+         :ticks ticks))
 
-  (:method ((thread thread) &key (locale (top-level-locale)))
-    (run (thread-state thread) :locale locale))
+  (:method ((thread thread) &key (locale (top-level-locale))
+                                 (ticks *default-thread-time-slice*))
+    (run (thread-state thread) :locale locale :ticks ticks))
 
-  (:method ((state thread-state) &key (locale (top-level-locale)))
+  (:method ((group thread-group) &key (locale (top-level-locale))
+                                      (ticks *default-thread-time-slice*))
+    (multiple-value-bind (thread scheduler-ticks)
+        (funcall (thread-group-scheduler group) group)
+      (when scheduler-ticks
+        (setf ticks scheduler-ticks))
+      (run (thread-state thread) :locale locale :ticks ticks)))
+
+  (:method ((state thread-state) &key (locale (top-level-locale))
+                                      (ticks *default-thread-time-slice*))
     (multiple-value-bind (exit-status value)
-        (run-thread state :locale locale)
+        (run-thread state :locale locale :ticks ticks)
       (if (eq exit-status :time-slice-exhausted)
-          (run state :locale locale)
+          (run state :locale locale :ticks ticks)
           value))))

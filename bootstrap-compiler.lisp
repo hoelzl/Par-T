@@ -473,8 +473,7 @@
   "A compiled Par-T read-eval-print loop"
   (init-par-t-comp)
   (let* ((par-t-code (compiler *par-t-top-level*))
-         (state (make-thread-state :fun par-t-code
-                                   :code (fn-code par-t-code))))
+         (state (make-thread :fn par-t-code)))
     (run state :locale (top-level-locale))))
 
 (defun comp-go (exp)
