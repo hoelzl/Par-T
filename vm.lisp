@@ -87,7 +87,14 @@
 ;;; 
 (defstruct (thread-group (:constructor
                              %make-thread-group
-                             (main-thread threads scheduler scheduler-info)))
+                             (main-thread threads scheduler scheduler-info))
+                         (:print-function
+                          (lambda (group stream depth)
+                            (declare (ignore depth))
+                            (print-unreadable-object (group stream :type t :identity t)
+                              (format stream "~A ~A"
+                                      (thread-id (thread-group-main-thread group))
+                                      (mapcar 'thread-id (thread-group-threads group)))))))
   ;; The main thread of this group.  This is the thread whose result is
   ;; returned by the VM and also the thread whose end is responsible for
   ;; quitting the VM.  The MAIN-THREAD must also be included in THREADS.
@@ -116,7 +123,7 @@
 purpose is to allow the scheduler to set up the SCHEDULER-INFO slot in
 THREAD-GROUP."))
 
-(defgeneric new-thread (scheduler thread-group new-thread)
+(defgeneric schedule-new-thread (scheduler thread-group new-thread)
   (:documentation
    "Called when NEW-THREAD is spawned for THREAD-GROUP."))
 
@@ -142,9 +149,9 @@ THREAD-GROUP."))
 (defmethod initialize-scheduler ((self round-robin-scheduler) (group thread-group))
   (setf (thread-group-scheduler-info group) 0))
 
-(defmethod new-thread ((scheduler round-robin-scheduler)
-                       (group thread-group)
-                       (new-thread thread))
+(defmethod schedule-new-thread ((scheduler round-robin-scheduler)
+                                (group thread-group)
+                                (new-thread thread))
   (setf (thread-group-threads group)
         (append (thread-group-threads group)
                 (list new-thread))))
@@ -182,8 +189,14 @@ THREAD-GROUP."))
     (unless group
       (setf group
             (make-thread-group :main-thread result
-                               :threads (list result))))
+                               :threads (list result)))
+      (setf (thread-group result) group))
+    (schedule-new-thread (thread-group-scheduler group) group result)
     result))
+
+(defun spawn-thread (fn args)
+  "The function called by the VM to spawn a new thread."
+  (apply #'make-thread :fn fn args))
 
 ;;; Utility Functions
 ;;; =================
@@ -409,6 +422,7 @@ Returns four values:
 
 
       ;; Thread handling
+      #+or
       (SPAWN
        (let ((fn (pop (thread-state-stack state)))
              (args (pop (thread-state-stack state))))
@@ -453,6 +467,7 @@ Returns four values:
           CONS CAR-SETTER CDR-SETTER
           %ALLOCATE-INSTANCE %ALLOCATE-ENTITY
           %INSTANCE-REF
+          SPAWN-THREAD
           NAME! PAR-T-EQ PAR-T-EQUAL PAR-T-EQL)
        (let ((stack (thread-state-stack state)))
          (setf (thread-state-stack state)

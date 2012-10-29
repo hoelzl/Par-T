@@ -302,6 +302,9 @@
     (cdr-setter! 2 cdr-setter nil nil)
     (cadr 1 cadr nil nil) 
 
+    ;; Threads
+    (spawn 2 spawn-thread true t)
+
     ;; Instance handling for the object system
     (%allocate-instance 2 %allocate-instance true nil)
     (%allocate-entity 2 %allocate-entity true nil)
