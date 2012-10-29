@@ -13,6 +13,7 @@
 ;;;; Simple VM for Par-T.
 
 (in-package :parallel-thetis)
+(declaim (optimize debug))
 
 (defstruct ret-addr fn pc env)
 
@@ -75,10 +76,12 @@
 
 (defun print-thread (thread stream depth)
   (declare (ignore depth))
-  (print-unreadable-object (thread stream :type t :identity t)
-    (format stream "~A~%  ~:W"
-            (thread-id thread)
-            (thread-state thread))))
+  (let ((*print-circle* t))
+    (print-unreadable-object (thread stream :type t :identity t)
+      (format stream "~A~%  ~:W~%  ~:W"
+              (thread-id thread)
+              (thread-state thread)
+              (thread-group thread)))))
 
 (defgeneric thread-group (threadlike)
   (:documentation
@@ -99,7 +102,7 @@
 ;;; 
 (defstruct (thread (:constructor
                        %make-thread
-                       (id parent %group blockedp priority weight detached-p))
+                       (id parent %group blocked-p priority weight detached-p))
                    (:print-function print-thread))
   ;; A unique identifier for this thread.
   (id (gensym "THREAD-"))
@@ -115,7 +118,7 @@
   ;; threads should set this field to a data structure that allows the
   ;; scheduler to test whether the thread has become executable again.
   ;; Details how this is supposed to work will be worked out later.
-  (blockedp nil)
+  (blocked-p nil)
   ;; The priority.  Threads withi higher priority should be preferred by the
   ;; scheduler to ones with lower priority.
   (priority 0 :type integer)
@@ -126,7 +129,7 @@
   ;; because nobody can wait for it.
   (detached-p nil :type (or null thread))
   ;; True if the thread has finished executing.
-  (completed-p nil :type boolean)
+  (completed-p nil)
   ;; The result of the thread.  Only meaningful if completed-p is true.
   (result nil))
 
@@ -140,7 +143,7 @@
 (defun print-thread-group (group stream depth)
   (declare (ignore depth))
   (print-unreadable-object (group stream :type t :identity t)
-    (format stream "~A ~A"
+    (format stream "~%  Main Thread: ~A~%   Threads: ~:W"
             (thread-id (thread-group-main-thread group))
             (mapcar 'thread-id (thread-group-threads group)))))
 
@@ -169,8 +172,9 @@
 
 (defgeneric schedule (scheduler thread-group)
   (:documentation
-   "Returns the THREAD of THREAD-GROUP that should be run in the next time
-   slice and, as second value, the number of ticks the thread should run."))
+   "Returns the thread of THREAD-GROUP that should be run in the next time
+   slice or NIL, if no thread can currently run, and, as second value, the
+   number of ticks the thread should run."))
 
 (defgeneric initialize-scheduler (scheduler thread-group)
   (:documentation
@@ -190,16 +194,23 @@ THREAD-GROUP."))
          (thread (nth index (thread-group-threads group)))
          (ticks *default-thread-time-slice*))
     (cond (thread
-           (incf (thread-group-scheduler-info group))
-           (values thread ticks))
-          ((null (thread-group-threads group))
-           (error "No threads in group ~A." group))
+           (cond ((not (thread-blocked-p thread))
+                  (incf (thread-group-scheduler-info group))
+                  (values thread ticks))
+                 (;; There is at least one runnable thread; continue
+                  ;; scheduling.  But update the SCHEDULER-INFO first.
+                  (some (lambda (thread)
+                          (not (thread-blocked-p thread)))
+                        (thread-group-threads group))
+                  (incf (thread-group-scheduler-info group))
+                  (schedule self group))))
           (t
-           (let ((threads (thread-group-threads group)))
-             (if (null (cdr threads))
-                 (setf (thread-group-scheduler-info group) 0)
-                 (setf (thread-group-scheduler-info group) 1))
-             (values (first threads) ticks))))))
+           ;; We arrived here because the index for the next scheduled thread
+           ;; was out of range.  This is either because we have completed a
+           ;; cycle through the theads or because somebody removed threads
+           ;; from the group.
+           (setf (thread-group-scheduler-info group) 0)
+           (schedule self group)))))
 
 (defmethod initialize-scheduler ((self round-robin-scheduler) (group thread-group))
   (setf (thread-group-scheduler-info group) 0))
@@ -207,9 +218,12 @@ THREAD-GROUP."))
 (defmethod schedule-new-thread ((scheduler round-robin-scheduler)
                                 (group thread-group)
                                 (new-thread thread))
-  (setf (thread-group-threads group)
-        (append (thread-group-threads group)
-                (list new-thread))))
+  (let ((threads (thread-group-threads group)))
+    (if (member new-thread threads)
+        (warn "Scheduling thread ~A, which is already a member of group ~A."
+              new-thread group)
+        (setf (thread-group-threads group)
+              (append threads (list new-thread))))))
                                     
                                  
 
@@ -217,35 +231,34 @@ THREAD-GROUP."))
 ;;; ------------
 
 (defun make-thread-group (&key main-thread threads scheduler scheduler-info)
-  (when (and main-thread (not threads))
-    (setf threads (list main-thread)))
   (cond ((not scheduler)
          (setf scheduler (make-instance 'round-robin-scheduler)))
         ((symbolp scheduler)
          (setf scheduler (make-instance scheduler))))
-  (let ((result (%make-thread-group main-thread threads scheduler scheduler-info)))
-    (initialize-scheduler scheduler result)
-    result))
+  (%make-thread-group main-thread threads scheduler scheduler-info))
 
 (defun make-thread (&key (id (gensym "THREAD-"))
                          (fn nil)
                          (parent nil)
                          (group nil)
-                         (blockedp nil)
+                         (blocked-p nil)
                          (priority 0)
                          (detached-p nil))
   (when (eql parent *false*)
     (setf parent nil))
-  (let ((result (%make-thread id parent group blockedp priority priority detached-p)))
-    (unless group
-      (setf group
-            (if parent
-                (thread-group parent)
-                (make-thread-group :main-thread result
-                                   :threads (list result))))
-      (setf (thread-group result) group))
+  (let ((result (%make-thread id parent group blocked-p priority priority detached-p)))
     (setf (thread-state result)
           (make-thread-state :fn fn :thread result))
+    (unless group
+      (progn 
+        (setf group
+              (if parent
+                  (thread-group parent)
+                  (progn
+                    (make-thread-group :main-thread result
+                                       :threads '()))))
+        (initialize-scheduler (thread-group-scheduler group) group)))
+    (setf (thread-group result) group)
     (schedule-new-thread (thread-group-scheduler group) group result)
     result))
 
@@ -563,6 +576,8 @@ Returns four values:
   (check-type state thread-state)
   ;;; TODO: Move these to the top-level
   (dotimes (tick ticks (values :time-slice-exhausted nil))
+    (assert (< (thread-state-pc state) (length (thread-state-code state))) ()
+            "Program counter out of range.")
     (setf (thread-state-instr state)
           (elt (thread-state-code state) (thread-state-pc state)))
     (print-trace-information state)
@@ -574,29 +589,45 @@ Returns four values:
             (error "Runtime error: ~A~%  State: ~:W" reason state)
             (return-from run-thread (values :done value)))))))
 
-(defgeneric run (executable &key locale ticks)
+(defgeneric run (executable &key locale ticks value)
   (:method ((fn fn) &key (locale (top-level-locale))
-                         (ticks *default-thread-time-slice*))
-    (run (make-thread :fn fn)
-         :locale locale
-         :ticks ticks))
+                         (ticks *default-thread-time-slice*)
+                         (value :no-value))
+    (run (make-thread :fn fn) :locale locale :ticks ticks :value value))
 
   (:method ((thread thread) &key (locale (top-level-locale))
-                                 (ticks *default-thread-time-slice*))
-    (run (thread-state thread) :locale locale :ticks ticks))
+                                 (ticks *default-thread-time-slice*)
+                                 (value :no-value))
+    (run (thread-state thread) :locale locale :ticks ticks :value value))
 
   (:method ((group thread-group) &key (locale (top-level-locale))
-                                      (ticks *default-thread-time-slice*))
+                                      (ticks *default-thread-time-slice*)
+                                      (value :no-value))
     (multiple-value-bind (thread scheduler-ticks)
-        (funcall (thread-group-scheduler group) group)
-      (when scheduler-ticks
-        (setf ticks scheduler-ticks))
-      (run (thread-state thread) :locale locale :ticks ticks)))
+        (schedule (thread-group-scheduler group) group)
+      (cond (thread
+             (when scheduler-ticks
+               (setf ticks scheduler-ticks))
+             (run (thread-state thread) :locale locale :ticks ticks :value value))
+            (t value))))
 
   (:method ((state thread-state) &key (locale (top-level-locale))
-                                      (ticks *default-thread-time-slice*))
-    (multiple-value-bind (exit-status value)
+                                      (ticks *default-thread-time-slice*)
+                                      (value :no-value))
+    (multiple-value-bind (exit-status thread-value)
         (run-thread state :locale locale :ticks ticks)
-      (if (eq exit-status :time-slice-exhausted)
-          (run (thread-group state) :locale locale :ticks ticks)
-          value))))
+      (let* ((thread (thread-state-thread state))
+             (group (thread-group thread)))
+        (ccase exit-status 
+          (:done
+           (setf (thread-completed-p thread) t
+                 (thread-blocked-p thread) t))
+          (:blocked
+           (setf (thread-blocked-p thread) t))
+          (:time-slice-exhausted))
+        (run group
+             :locale locale :ticks ticks
+             :value (if (or (eq exit-status :time-slice-exhausted)
+                            (not (eq thread (thread-group-main-thread group))))
+                        value
+                        thread-value))))))
