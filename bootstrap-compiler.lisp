@@ -447,10 +447,10 @@
 
   ;; Lisp functions
   (set-global-var! 'lisp-call
-    (new-fn :name 'lisp-call :args '(function args)
+    (new-fn :name 'lisp-call :args '(function-name args)
             :code '((ARGS 2)
+                    (LVAR 0 0 ";" function-name)
                     (LVAR 0 1 ";" args)
-                    (LVAR 0 0 ";" name)
                     (LISP-CALL)
                     (RETURN))))
 
@@ -645,6 +645,12 @@
   (init-par-t-comp)
   (load-par-t-standard-library)
   (let ((filename (par-t-system-file "tests")))
+    (load-par-t-file filename)))
+
+(defun load-par-t-examples ()
+  (init-par-t-comp)
+  (load-par-t-standard-library)
+  (let ((filename (par-t-system-file "examples")))
     (load-par-t-file filename)))
 
 

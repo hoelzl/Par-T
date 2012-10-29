@@ -13,7 +13,10 @@
 ;;;; Simple VM for Par-T.
 
 (in-package :parallel-thetis)
+#+debug-poem-vm
 (declaim (optimize debug))
+#+(and optimize-poem-vm (not debug-poem-vm))
+(declare (optimize (speed 3) (safety 2) (compilation-speed 0) (space 1) (debug 0)))
 
 (defstruct ret-addr fn pc env)
 
@@ -269,6 +272,9 @@ THREAD-GROUP."))
 ;;; Utility Functions
 ;;; =================
 
+#+optimize-poem-vm
+(declaim (inline set-up-call))
+
 (defun set-up-call (state fun call-n-args)
   (cond ((fn-p fun)
          (setf (thread-state-fn state) fun
@@ -316,6 +322,9 @@ THREAD-GROUP."))
 ;;; One-Step Execution
 ;;; ==================
 
+#+optimize-poem-vm
+(declaim (inline run-thread-1-step))
+
 (defun run-thread-1-step (state locale)
   "Runs the thread with state STATE for a single step using LOCALE.
 Returns four values:
@@ -359,6 +368,7 @@ Returns four values:
          (multiple-value-bind (value presentp)
              (get-var-in-locale var locale)
            (cond (presentp
+                  #+debug-poem-vm
                   (when *trace-par-t-global-loads*
                     (format *trace-output*
                             "~&>>> PT: accessing ~A~%" (arg1 (thread-state-instr state))))
@@ -423,8 +433,6 @@ Returns four values:
                  ;; should classify this as an error or a normal way to halt
                  ;; execution, but since we are currently using it in the
                  ;; REPL, let's treat it as a normal return for now.
-                 
-                 ;; (warn "Returning from top level?")
                  (values nil nil (first stack) 'top-level-return)))))
       
       (CALLJ
@@ -445,11 +453,12 @@ Returns four values:
          (cond ((not (= n-args n-req))
                 (values nil t nil (list 'bad-args n-req n-args)))
                (t
-                (let ((new-bindings (make-array n-args)))
+                (let ((new-bindings (make-array n-args))
+                      (stack (thread-state-stack state)))
                   (push new-bindings (thread-state-env state))
                   (loop for i from (- n-args 1) downto 0 do
-                           (setf (elt new-bindings i)
-                                 (pop (thread-state-stack state)))))
+                           (setf (elt new-bindings i) (pop stack)))
+                  (setf (thread-state-stack state) stack))
                 (values t nil nil 'args)))))
       (VARARGS
        (let* ((instr (thread-state-instr state))
@@ -458,14 +467,14 @@ Returns four values:
          (cond ((< n-args n-req)
                 (values nil t nil (list 'bad-varargs n-req n-args)))
                (t
-                (let ((new-bindings (make-array (+ 1 n-req) :initial-element '())))
+                (let ((new-bindings (make-array (+ 1 n-req) :initial-element '()))
+                      (stack (thread-state-stack state)))
                   (push new-bindings (thread-state-env state))
                   (loop repeat (- n-args n-req) do
-                           (push (pop (thread-state-stack state))
-                                 (elt new-bindings n-req)))
+                           (push (pop stack) (elt new-bindings n-req)))
                   (loop for i from (- n-req 1) downto 0 do
-                           (setf (elt new-bindings i)
-                                 (pop (thread-state-stack state)))))
+                           (setf (elt new-bindings i) (pop stack)))
+                  (setf (thread-state-stack state) stack))
                 (values t nil nil 'varargs)))))
       
       (FN
@@ -477,18 +486,20 @@ Returns four values:
        (values t nil nil 'fn))
       
       (LISP-CALL
-       (let ((fun (fdefinition (pop (thread-state-stack state))))
-             (args (pop (thread-state-stack state))))
+       (let ((args (pop (thread-state-stack state)))
+             (fun (fdefinition (pop (thread-state-stack state)))))
          (push (apply fun args) (thread-state-stack state)))
        (values t nil nil 'lisp-call))
       
       (PRIM
        (let ((fun (fdefinition (arg1 (thread-state-instr state))))
              (n-args (thread-state-n-args state))
-             (args '()))
+             (args '())
+             (stack (thread-state-stack state)))
          (dotimes (i n-args)
-           (push (pop (thread-state-stack state)) args))
-         (push (apply fun args) (thread-state-stack state)))
+           (push (pop stack) args))
+         (push (apply fun args) stack)
+         (setf (thread-state-stack state) stack))
        (values t nil nil 'prim))
 
       ;; Continuation instructions:
@@ -570,16 +581,21 @@ Returns four values:
 ;;; Running a Single Thread 
 ;;; =======================
 
+#+optimize-poem-vm
+(declaim (inline run-thread))
+
 (defun run-thread (state &key (locale (top-level-locale))
                               (ticks *default-thread-time-slice*))
   "Run the abstract machine on the code for f."
+  #+debug-poem-vm
   (check-type state thread-state)
-  ;;; TODO: Move these to the top-level
   (dotimes (tick ticks (values :time-slice-exhausted nil))
+    #+debug-poem-vm
     (assert (< (thread-state-pc state) (length (thread-state-code state))) ()
             "Program counter out of range.")
     (setf (thread-state-instr state)
           (elt (thread-state-code state) (thread-state-pc state)))
+    #+debug-poem-vm
     (print-trace-information state)
     (incf (thread-state-pc state))
     (multiple-value-bind (continue? error? value reason)

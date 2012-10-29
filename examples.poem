@@ -1,0 +1,25 @@
+(herald "Examples")
+
+(define (example-01)
+  (spawn (lambda ()
+	   (display 'thread-1) (newline) 'thread-1)
+	 (current-thread) '())
+  (spawn (lambda ()
+	   (display 'thread-2) (newline) 'thread-2)
+	 (current-thread) '())
+  (display 'main-thread)
+  (newline)
+  'main)
+
+(define (example-02)
+  (let ((thread-1 (spawn (lambda ()
+			   (display 'thread-1) (newline) 'thread-1)
+			 (current-thread) '()))
+	(thread-2 (spawn (lambda ()
+			   (display 'thread-2) (newline) 'thread-2)
+			 (current-thread) '())))
+    (display 'main-thread)
+    (newline)
+    (list thread-1 thread-2)))
+
+
