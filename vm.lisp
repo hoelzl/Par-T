@@ -605,45 +605,55 @@ Returns four values:
             (error "Runtime error: ~A~%  State: ~:W" reason state)
             (return-from run-thread (values :done value)))))))
 
-(defgeneric run (executable &key locale ticks value)
+(defun run-loop (group thread state locale ticks)
+  (let ((value :no-value)
+        (scheduler (thread-group-scheduler group)))
+    (loop
+      (multiple-value-bind (exit-status thread-value)
+          (run-thread state :locale locale :ticks ticks)
+        (ccase exit-status 
+          (:done
+           (setf (thread-completed-p thread) t
+                 (thread-blocked-p thread) t)
+           (when (eq thread (thread-group-main-thread group))
+             (setf value thread-value)))
+          (:blocked
+           (setf (thread-blocked-p thread) t))
+          (:time-slice-exhausted)))
+      (multiple-value-bind (thread scheduler-ticks)
+          (schedule scheduler group)
+        (cond (thread
+               (when scheduler-ticks
+                 (setf ticks scheduler-ticks)))
+              (t
+               (return-from run-loop value)))))))
+
+(defgeneric run (executable &key locale ticks)
+
   (:method ((fn fn) &key (locale (top-level-locale))
-                         (ticks *default-thread-time-slice*)
-                         (value :no-value))
-    (run (make-thread :fn fn) :locale locale :ticks ticks :value value))
+                         (ticks *default-thread-time-slice*))
+    (let* ((thread (make-thread :fn fn))
+           (state (thread-state thread))
+           (group (thread-group thread)))
+      (run-loop group thread state locale ticks)))
 
   (:method ((thread thread) &key (locale (top-level-locale))
-                                 (ticks *default-thread-time-slice*)
-                                 (value :no-value))
-    (run (thread-state thread) :locale locale :ticks ticks :value value))
+                                 (ticks *default-thread-time-slice*))
+    (run (thread-group thread) thread (thread-state thread) locale ticks))
 
   (:method ((group thread-group) &key (locale (top-level-locale))
-                                      (ticks *default-thread-time-slice*)
-                                      (value :no-value))
+                                      (ticks *default-thread-time-slice*))
     (multiple-value-bind (thread scheduler-ticks)
         (schedule (thread-group-scheduler group) group)
       (cond (thread
              (when scheduler-ticks
                (setf ticks scheduler-ticks))
-             (run (thread-state thread) :locale locale :ticks ticks :value value))
-            (t value))))
+             (run-loop group thread (thread-state thread) locale ticks))
+            (t :no-thread))))
 
   (:method ((state thread-state) &key (locale (top-level-locale))
-                                      (ticks *default-thread-time-slice*)
-                                      (value :no-value))
-    (multiple-value-bind (exit-status thread-value)
-        (run-thread state :locale locale :ticks ticks)
-      (let* ((thread (thread-state-thread state))
-             (group (thread-group thread)))
-        (ccase exit-status 
-          (:done
-           (setf (thread-completed-p thread) t
-                 (thread-blocked-p thread) t))
-          (:blocked
-           (setf (thread-blocked-p thread) t))
-          (:time-slice-exhausted))
-        (run group
-             :locale locale :ticks ticks
-             :value (if (or (eq exit-status :time-slice-exhausted)
-                            (not (eq thread (thread-group-main-thread group))))
-                        value
-                        thread-value))))))
+                                      (ticks *default-thread-time-slice*))
+    (let* ((thread (thread-state-thread state))
+           (group (thread-group thread)))
+      (run-loop group thread state locale ticks))))
+
