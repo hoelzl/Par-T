@@ -620,9 +620,11 @@ Returns four values:
           (:blocked
            (setf (thread-blocked-p thread) t))
           (:time-slice-exhausted)))
-      (multiple-value-bind (thread scheduler-ticks)
+      (multiple-value-bind (new-thread scheduler-ticks)
           (schedule scheduler group)
-        (cond (thread
+        (cond (new-thread
+               (setf thread new-thread
+                     state (thread-state new-thread))
                (when scheduler-ticks
                  (setf ticks scheduler-ticks)))
               (t
