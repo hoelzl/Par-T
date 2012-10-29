@@ -62,11 +62,11 @@
 (defvar *false* (make-par-t-false))
 
 (defmethod make-load-form ((self par-t-true) &optional env)
-  (declare (ignore env))
+  (declare (ignore self env))
   '*true*)
 
 (defmethod make-load-form ((self par-t-false) &optional env)
-  (declare (ignore env))
+  (declare (ignore self env))
   '*false*)
 
 ;;; The definition of a function for the VM.

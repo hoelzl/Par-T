@@ -216,11 +216,13 @@ THREAD-GROUP."))
            (schedule self group)))))
 
 (defmethod initialize-scheduler ((self round-robin-scheduler) (group thread-group))
+  (declare (ignore self))
   (setf (thread-group-scheduler-info group) 0))
 
 (defmethod schedule-new-thread ((scheduler round-robin-scheduler)
                                 (group thread-group)
                                 (new-thread thread))
+  (declare (ignore scheduler))
   (let ((threads (thread-group-threads group)))
     (if (member new-thread threads)
         (warn "Scheduling thread ~A, which is already a member of group ~A."
