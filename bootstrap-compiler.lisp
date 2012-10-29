@@ -604,7 +604,8 @@
 (defvar *trace-par-t-reader* nil)
 
 (defun load-par-t-file (file-name)
-  (let ((result '()))
+  (let ((result '())
+        (*package* (find-package '#:parallel-thetis)))
     (with-open-file (stream file-name :direction :input)
       (do ((form (par-t-read stream) (par-t-read stream)))
 	  ((eof-object-p form) (nreverse result))
@@ -664,3 +665,8 @@
 (init-par-t-comp)
 (load-par-t-standard-library)
 
+;;; To allow quick testing after loading the system.
+(defun cl-user::load-and-run-all-par-t-tests ()
+  (let ((*package* (find-package '#:parallel-thetis)))
+    (load-par-t-tests)
+    (comp-go '(all-tests))))
