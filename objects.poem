@@ -118,10 +118,10 @@
 	 (let* ((new (%allocate-instance
 		      class
 		      (length *the-slots-of-a-class*)))
-		(name (getl initargs 'name #f))
-		(dsupers (getl initargs 'direct-supers '()))
+		(name (getl initargs :name #f))
+		(dsupers (getl initargs :direct-supers '()))
 		(dslots  (map list
-			      (getl initargs 'direct-slots  '())))
+			      (getl initargs :direct-slots  '())))
 		(cpl     (let loop ((sups dsupers)
 				    (so-far (list new)))
 			   (if (null? sups)
@@ -161,7 +161,7 @@
 	   (slot-set! new 'getters-and-setters  getters-and-setters)
 	   new))
 	((eq? class <generic>)
-	 (let ((name (getl initargs 'name #f))
+	 (let ((name (getl initargs :name #f))
 	       (new (%allocate-entity class
 				      (length (class-slots class)))))
 	   (slot-set! new 'name name)
@@ -173,43 +173,29 @@
 		     (length (class-slots class)))))
 	   (slot-set! new
 		      'specializers
-		      (getl initargs 'specializers))
+		      (getl initargs :specializers))
 	   (slot-set! new
 		      'procedure
-		      (getl initargs 'procedure))
+		      (getl initargs :procedure))
 	   new))))
 
 
 (define (slot-ref object slot-name)
-  ;; (display "slot-ref ") (display slot-name)
-  ;; (newline)
   (let* ((info (lookup-slot-info (class-of object) slot-name))
 	 (getter (list-ref info 0)))
-    ;; (display "info and getter: ") (write (list info getter))
-    ;; (newline)
     (getter object)))
 
 (define (slot-set! object slot-name new-value)
-  ;; (display "slot-set! ") (display (list slot-name new-value))
-  ;; (newline)
   (let* ((info (lookup-slot-info (class-of object) slot-name))
 	 (setter (list-ref info 1)))
-    ;; (display "info and setter: ") (write (list info setter))
-    ;; (newline)
     (setter new-value object)))
 
 (define (lookup-slot-info class slot-name)
-  ;; (display "lookup-slot-info")
-  ;; (newline)
-  ;; (display "slot-name and <class>? ") (write (list slot-name (eq? class <class>)))
-  ;; (newline)
   (let* ((getters-and-setters
 	  (if (eq? class <class>)
 	      *getters-and-setters-for-class*
 	      (slot-ref class 'getters-and-setters)))
 	 (entry (assq slot-name getters-and-setters)))
-    ;; (display "entry: ")  (write entry)
-    ;; (newline)
     (if entry
 	(cdr entry)
 	(error "No slot" slot-name "in instances of" class))))
@@ -233,14 +219,14 @@
 
 
 (define <top> (make <class>
-		'name '<top>
-		'direct-supers (list)
-		'direct-slots  (list)))
+		:name '<top>
+		:direct-supers (list)
+		:direct-slots  (list)))
 
 (define <object> (make <class>
-		   'name '<object>
-		   'direct-supers (list <top>)
-		   'direct-slots  (list)))
+		   :name '<object>
+		   :direct-supers (list <top>)
+		   :direct-slots  (list)))
 
 (slot-set! <class> 'name
 	   '<class>)
@@ -262,41 +248,41 @@
 
 
 (define <procedure-class> (make <class>
-			    'name '<procedure-class>
-			    'direct-supers (list <class>)
-			    'direct-slots  (list)))
+			    :name '<procedure-class>
+			    :direct-supers (list <class>)
+			    :direct-slots  (list)))
 
 (define <entity-class> (make <class>
-			 'name '<entity-class>
-			 'direct-supers (list <procedure-class>)
-			 'direct-slots  (list)))
+			 :name '<entity-class>
+			 :direct-supers (list <procedure-class>)
+			 :direct-slots  (list)))
 
 (define <generic> (make <entity-class>
-		    'name '<generic>
-		    'direct-supers (list <object>)
-		    'direct-slots  (list 'name 'methods)))
+		    :name '<generic>
+		    :direct-supers (list <object>)
+		    :direct-slots  (list 'name 'methods)))
 
 (define <method> (make <class>
-		   'name '<method>
-		   'direct-supers (list <object>)
-		   'direct-slots  (list 'specializers
+		   :name '<method>
+		   :direct-supers (list <object>)
+		   :direct-slots  (list 'specializers
 					'procedure)))
 
 ;;; Three convenient shortcuts.
 ;;;
 (define (make-class name direct-supers direct-slots)
   (make <class>
-    'name name
-    'direct-supers direct-supers
-    'direct-slots  direct-slots))
+    :name name
+    :direct-supers direct-supers
+    :direct-slots  direct-slots))
 
 (define (make-generic name)
-  (make <generic> 'name name))
+  (make <generic> :name name))
 
 (define (make-method specializers procedure)
   (make <method>
-    'specializers specializers
-    'procedure    procedure))
+    :specializers specializers
+    :procedure    procedure))
 
 
 ;;; The initialization protocol
@@ -332,8 +318,6 @@
 					  compute-apply-methods))
 
 (define (add-method generic method)
-  ;; (display "add-method ") (slot-ref generic 'name)
-  ;; (newline)
   (slot-set! generic
 	     'methods
 	     (cons method
@@ -361,8 +345,6 @@
 ; protocol.
 
 (%instance-proc-setter! (lambda (generic)
-			  ;; (display "compute-apply-generic #f")
-			  ;; (newline)
 			  (let ((method (car (generic-methods generic))))
 			    ((method-procedure method) #f generic)))
 			compute-apply-generic)
@@ -370,12 +352,7 @@
 (add-method compute-apply-generic
   (make-method (list <generic>)
     (lambda (call-next-method generic)
-      ;; (display "compute-apply-generic <generic>")
-      ;; (newline)
       (lambda args
-	;; (display "compute-apply-generic <generic> (nested) ")
-	;; (display args)
-	;; (newline)
 	(if (and (memq? generic generic-invocation-generics)
 		 (memq? (car args) generic-invocation-generics))
 	    (apply (method-procedure
@@ -389,8 +366,6 @@
 (add-method compute-methods
   (make-method (list <generic>)
     (lambda (call-next-method generic)
-      ;; (display "compute-methods <generic>")
-      ;; (newline)
       (lambda (args)
 	(let ((applicable
 	       (collect-if (lambda (method)
@@ -409,16 +384,10 @@
 (add-method compute-method-more-specific?
   (make-method (list <generic>)
     (lambda (call-next-method generic)
-      ;; (display "compute-method-more-specific? <generic>")
-      ;; (newline)
       (lambda (m1 m2 args)
 	(let loop ((specls1 (method-specializers m1))
 		   (specls2 (method-specializers m2))
 		   (args args))
-	  ;; (display "compute-method-more-specific? <generic> nested")
-	  ;; (newline)
-	  ;; (display (list specls1 specls2 args))
-	  ;; (newline)
 	  (cond ((and (null? specls1) (null? specls2))
 		 (error
 		  "Two methods are equally specific."))
@@ -442,17 +411,10 @@
 (add-method compute-apply-methods
   (make-method (list <generic>)
     (lambda (call-next-method generic)
-      ;; (display "compute-apply-methods <generic>")
-      ;; (newline)
       (lambda (methods args)
-	;; (display "compute-apply-methods <generic> (nested) ")
-	;; (display (list methods args))
-	;; (newline)
 	(letrec ((one-step
 		  (lambda (tail)
 		    (lambda ()
-		      ;; (display "  tail: ") (display tail)
-		      ;; (newline)
 		      (if (null? tail)
 			  (error "No applicable methods/next methods.")
 			  (apply (method-procedure (car tail))
@@ -473,25 +435,16 @@
 (add-method initialize
   (make-method (list <class>)
     (lambda (call-next-method class initargs)
-      ;; (display "initialize <class>: ") (display class)
-      ;; (newline)
-      ;; (display "  ") (display initargs)
-      ;; (newline)
-      ;; (call-next-method)
-      ;; (display "Called next method")
-      ;; (newline)
       (slot-set! class
 		 'direct-supers
-		 (getl initargs 'direct-supers '()))
+		 (getl initargs :direct-supers '()))
       (slot-set! class
 		 'direct-slots
 		 (map (lambda (s)
 			(if (pair? s) s (list s)))
-		      (getl initargs 'direct-slots  '())))
+		      (getl initargs :direct-slots  '())))
       (slot-set! class 'cpl   (compute-cpl   class))
       (slot-set! class 'slots (compute-slots class))
-      ;; (display "Set slots")
-      ;; (newline)
       (let* ((n-fields 0)
 	     (field-initializers '())
 	     (allocator
@@ -512,13 +465,11 @@
 	(slot-set! class 'n-fields n-fields)
 	(slot-set! class 'field-initializers field-initializers)
 	(slot-set! class 'getters-and-setters getters-and-setters)
-	(slot-set! class 'name (getl initargs 'name #f))))))
+	(slot-set! class 'name (getl initargs :name #f))))))
 
 (add-method initialize
   (make-method (list <generic>)
     (lambda (call-next-method generic initargs)
-      ;; (display "initialize <generic>")
-      ;; (newline)
       (call-next-method)
       (slot-set! generic 'methods '())
       (%instance-proc-setter! (lambda args (error "Has no methods."))
@@ -527,11 +478,9 @@
 (add-method initialize
   (make-method (list <method>)
     (lambda (call-next-method method initargs)
-      ;; (display "initialize <method>")
-      ;; (newline)
       (call-next-method)
-      (slot-set! method 'specializers (getl initargs 'specializers))
-      (slot-set! method 'procedure    (getl initargs 'procedure)))))
+      (slot-set! method 'specializers (getl initargs :specializers))
+      (slot-set! method 'procedure    (getl initargs :procedure)))))
 
 
 (add-method allocate-instance
@@ -615,15 +564,15 @@
 
 (define <primitive-class>
   (make <class>
-    'name '<primitive-class>
-    'direct-supers (list <class>)
-    'direct-slots (list)))
+    :name '<primitive-class>
+    :direct-supers (list <class>)
+    :direct-slots (list)))
 
 (define (make-primitive-class name . class)
   (make (if (null? class) <primitive-class> (car class))
-    'name name
-    'direct-supers (list <top>)
-    'direct-slots  (list)))
+    :name name
+    :direct-supers (list <top>)
+    :direct-slots  (list)))
 
 
 (define <pair>        (make-primitive-class '<pair>))
