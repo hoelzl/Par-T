@@ -511,7 +511,8 @@
 		   (slot-ref class 'slots))))
 	(slot-set! class 'n-fields n-fields)
 	(slot-set! class 'field-initializers field-initializers)
-	(slot-set! class 'getters-and-setters getters-and-setters)))))
+	(slot-set! class 'getters-and-setters getters-and-setters)
+	(slot-set! class 'name (getl initargs 'name #f))))))
 
 (add-method initialize
   (make-method (list <generic>)

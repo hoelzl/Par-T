@@ -62,3 +62,23 @@
 	 (fail)
 	 lst))
 ||#
+
+(define (example-04)
+  (define foo (make-generic 'foo))
+  (add-method foo
+	      (make-method (list <top>)
+			   (lambda (call-next-method obj)
+			     (display (list '<top> obj))
+			     (newline))))
+  (add-method foo
+	      (make-method (list <pair>)
+			   (lambda (call-next-method obj)
+			     (call-next-method)
+			     (display (list '<pair> obj))
+			     (newline))))
+  (display "Integer:") (newline)
+  (foo 123)
+  (display "List:") (newline)
+  (foo '(1 2 3))
+  (display "Self-Application:") (newline)
+  (foo foo))

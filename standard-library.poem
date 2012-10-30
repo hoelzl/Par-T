@@ -372,9 +372,25 @@
    (lambda () n)
    (lambda () (an-integer->= (+ n 1)))))
 
+(define (an-integer-<= n)
+  (create-choice-points
+   (lambda () n)
+   (lambda () (an-integer-<= (- n 1)))))
+
 (define (an-integer-between m n)
   (if (> m n)
       (fail)
       (create-choice-points
        (lambda () m)
        (lambda () (an-integer-between (+ m 1) n)))))
+
+(define (a-multiple-of k)
+  (let ((multiplier (an-integer->= 1)))
+    (* multiplier k)))
+
+(define (an-element-of lst)
+  (if (null? lst)
+      (fail)
+      (create-choice-points
+       (lambda () (car lst))
+       (lambda () (an-element-of (cdr lst))))))
