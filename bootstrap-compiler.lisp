@@ -446,12 +446,12 @@
 		    (RETURN))))
 
   ;; Lisp functions
-  (set-global-var! '%lisp-call
-    (new-fn :name '%lisp-call :args '(function-name args)
+  (set-global-var! '%lisp-apply
+    (new-fn :name '%lisp-apply :args '(function-name args)
             :code '((ARGS 2)
                     (LVAR 0 0 ";" function-name)
                     (LVAR 0 1 ";" args)
-                    (LISP-CALL)
+                    (LISP-APPLY)
                     (RETURN))))
 
   ;; Primitive functions

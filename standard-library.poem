@@ -319,7 +319,7 @@
 ;;; =================
 
 (define (mod m n)
-  (lisp-call 'mod (list m n)))
+  (lisp-apply 'mod (list m n)))
 
 (define (even? n)
   (= 0 (mod n 2)))
@@ -332,10 +332,10 @@
 ;;; =============
 
 (define (load file-name)
-  (lisp-call 'load-par-t-file (list file-name)))
+  (lisp-apply 'load-par-t-file (list file-name)))
 
 (define (system-file file-name)
-  (lisp-call 'par-t-system-file (list file-name)))
+  (lisp-apply 'par-t-system-file (list file-name)))
 
 ;;; Non-Deterministic Computation
 ;;; =============================

@@ -6,124 +6,124 @@
 (herald "Snark Interface")
 
 (define (initialize-snark . args)
-  (lisp-call 'snark::initialize args))
+  (lisp-apply 'snark::initialize args))
 
 (define (use-resolution . args)
-  (lisp-call 'snark::use-resolution args))
+  (lisp-apply 'snark::use-resolution args))
 
 (define (use-hyperresolution . args)
-  (lisp-call 'snark::use-hyperresolution args))
+  (lisp-apply 'snark::use-hyperresolution args))
 
 (define (use-negative-hyperresolution . args)
-  (lisp-call 'snark::use-negative-hyperresolution args))
+  (lisp-apply 'snark::use-negative-hyperresolution args))
 
 (define (use-ur-resolution . args)
-  (lisp-call 'snark::use-ur-resolution args))
+  (lisp-apply 'snark::use-ur-resolution args))
 
 (define (use-paramodulation . args)
-  (lisp-call 'snark::use-paramodulation args))
+  (lisp-apply 'snark::use-paramodulation args))
 
 (define (use-subsumption . args)
-  (lisp-call 'snark::use-subsumption args))
+  (lisp-apply 'snark::use-subsumption args))
 
 (define (use-constraint-solver-in-subsumption . args)
-  (lisp-call 'snark::use-constraint-solver-in-subsumption args))
+  (lisp-apply 'snark::use-constraint-solver-in-subsumption args))
 
 (define (use-term-ordering . args)
-  (lisp-call 'snark::use-term-ordering args))
+  (lisp-apply 'snark::use-term-ordering args))
 
 (define (use-default-ordering . args)
-  (lisp-call 'snark::use-default-ordering args))
+  (lisp-apply 'snark::use-default-ordering args))
 
 (define (use-literal-ordering-with-hyperresolution . args)
-  (lisp-call 'snark::use-literal-ordering-with-hyperresolution args))
+  (lisp-apply 'snark::use-literal-ordering-with-hyperresolution args))
 
 (define (use-literal-ordering-with-ur-resolution . args)
-  (lisp-call 'snark::use-literal-ordering-with-ur-resolution args))
+  (lisp-apply 'snark::use-literal-ordering-with-ur-resolution args))
 
 (define (use-literal-ordering-with-paramodulation . args)
-  (lisp-call 'snark::use-literal-ordering-with-paramodulation args))
+  (lisp-apply 'snark::use-literal-ordering-with-paramodulation args))
 
 (define (ordering-functions>constants . args)
-  (lisp-call 'snark::ordering-functions>constants args))
+  (lisp-apply 'snark::ordering-functions>constants args))
 
 (define (use-subsumption-by-false . args)
-  (lisp-call 'snark::use-subsumption-by-false args))
+  (lisp-apply 'snark::use-subsumption-by-false args))
 
 (define (print-options-when-starting . args)
-  (lisp-call 'snark::print-options-when-starting args))
+  (lisp-apply 'snark::print-options-when-starting args))
 
 (define (print-summary-when-finished . args)
-  (lisp-call 'snark::print-summary-when-finished args))
+  (lisp-apply 'snark::print-summary-when-finished args))
 
 (define (print-rows-when-derived . args)
-  (lisp-call 'snark::print-rows-when-derived args))
+  (lisp-apply 'snark::print-rows-when-derived args))
 
 (define (print-rows-when-finished . args)
-  (lisp-call 'snark::print-rows-when-finished args))
+  (lisp-apply 'snark::print-rows-when-finished args))
 
 (define (print-final-rows . args)
-  (lisp-call 'snark::print-final-rows args))
+  (lisp-apply 'snark::print-final-rows args))
 
 (define (print-row-answers . args)
-  (lisp-call 'snark::print-row-answers args))
+  (lisp-apply 'snark::print-row-answers args))
 
 (define (print-agenda-when-finished . args)
-  (lisp-call 'snark::print-agenda-when-finished args))
+  (lisp-apply 'snark::print-agenda-when-finished args))
 
 (define (run-time-limit . args)
-  (lisp-call 'snark::run-time-limit args))
+  (lisp-apply 'snark::run-time-limit args))
 
 (define (use-indefinite-answers . args)
-  (lisp-call 'snark::use-indefinite-answers args))
+  (lisp-apply 'snark::use-indefinite-answers args))
 
 (define (use-conditional-answer-creation . args)
-  (lisp-call 'snark::use-conditional-answer-creation args))
+  (lisp-apply 'snark::use-conditional-answer-creation args))
 
 (define (use-constructive-answer-restriction . args)
-  (lisp-call 'snark::use-constructive-answer-restriction args))
+  (lisp-apply 'snark::use-constructive-answer-restriction args))
 
 (define (allow-skolem-symbols-in-answers . args)
-  (lisp-call 'snark::allow-skolem-symbols-in-answers args))
+  (lisp-apply 'snark::allow-skolem-symbols-in-answers args))
 
 (define (declare-sort . args)
-  (lisp-call 'snark::declare-sort args))
+  (lisp-apply 'snark::declare-sort args))
 
 (define (declare-subsort . args)
-  (lisp-call 'snark::declare-subsort args))
+  (lisp-apply 'snark::declare-subsort args))
 
 (define (declare-sorts-incompatible . args)
-  (lisp-call 'snark::declare-sorts-incompatible args))
+  (lisp-apply 'snark::declare-sorts-incompatible args))
 
 (define (declare-constant . args)
-  (lisp-call 'snark::declare-constant args))
+  (lisp-apply 'snark::declare-constant args))
 
 (define (declare-function . args)
-  (lisp-call 'snark::declare-function args))
+  (lisp-apply 'snark::declare-function args))
 
 (define (declare-relation . args)
-  (lisp-call 'snark::declare-relation args))
+  (lisp-apply 'snark::declare-relation args))
 
 (define (declare-ordering-greater? . args)
-  (lisp-call 'snark-declare-ordering-greaterp args))
+  (lisp-apply 'snark-declare-ordering-greaterp args))
 
 (define (assert . args)
-  (lisp-call 'snark::assert args))
+  (lisp-apply 'snark::assert args))
 
 (define (assert-rewrite . args)
-  (lisp-call 'snark::assert-rewrite args))
+  (lisp-apply 'snark::assert-rewrite args))
 
 (define (assume . args)
-  (lisp-call 'snark::assume args))
+  (lisp-apply 'snark::assume args))
 
 (define (prove . args)
-  (lisp-call 'snark::prove args))
+  (lisp-apply 'snark::prove args))
 
 (define (sort-name? . args)
-  (lisp-call 'snark::sort-name? args))
+  (lisp-apply 'snark::sort-name? args))
 
 (define (snark-closure)
-  (lisp-call 'snark::closure '()))
+  (lisp-apply 'snark::closure '()))
 
 (define $snark-false 'snark-lisp:false)
 
@@ -136,4 +136,4 @@
 
 (define (answer . args)
   (convert-snark-false
-   (lisp-call 'snark::answer args)))
+   (lisp-apply 'snark::answer args)))

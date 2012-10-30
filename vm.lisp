@@ -487,11 +487,11 @@ Returns four values:
              (thread-state-stack state))
        (values t nil nil 'fn))
       
-      (LISP-CALL
+      (LISP-APPLY
        (let ((args (pop (thread-state-stack state)))
              (fun (fdefinition (pop (thread-state-stack state)))))
          (push (apply fun args) (thread-state-stack state)))
-       (values t nil nil 'lisp-call))
+       (values t nil nil 'lisp-apply))
       
       (PRIM
        (let ((fun (fdefinition (arg1 (thread-state-instr state))))
