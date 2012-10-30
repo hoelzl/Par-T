@@ -44,6 +44,7 @@
     (list thread-1 thread-2)))
 
 (define (example-03)
+  (clear-all-choice-points)
   (let ((x (amb 1 2 3 4 5))
 	(y (amb 2 4 6)))
     (display "Trying: ") (display (list x y)) (newline)
@@ -51,3 +52,13 @@
 	     (>= (+ x y) 7))
 	(list x y)
 	(fail))))
+
+#||
+(let ((lst (example-03)))
+     (display "Trying real hard...") (newline)
+     (if (or (not (number? (first lst)))
+	     (not (number? (second lst)))
+	     (< (first lst) (second lst)))
+	 (fail)
+	 lst))
+||#

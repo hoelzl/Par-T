@@ -367,3 +367,14 @@
 				  `(lambda () ,comp))
 				computations)))
 
+(define (an-integer->= n)
+  (create-choice-points
+   (lambda () n)
+   (lambda () (an-integer->= (+ n 1)))))
+
+(define (an-integer-between m n)
+  (if (> m n)
+      (fail)
+      (create-choice-points
+       (lambda () m)
+       (lambda () (an-integer-between (+ m 1) n)))))

@@ -16,24 +16,31 @@
 
 (define (set-up-theory)
   (assert '(foo x))
-  (assert '(foo y)))
+  (assert '(foo y))
+  (assert '(implies (foo x) (bar x))))
 
 (define (snarky-example-01)
   (set-up-snark)
   (set-up-theory)
-  (prove '(foo ?x) ':answer '(ans ?x)))
+  (answer (prove '(foo ?x) ':answer '(ans ?x))))
 
 (define (snarky-example-02)
   (set-up-snark)
   (set-up-theory)
   (prove '(foo ?x) ':answer '(ans ?x))
-  (snark-closure))
+  (answer (snark-closure)))
 
 (define (snarky-example-03)
   (set-up-snark)
   (set-up-theory)
-  (print-summary-when-finished '())
+  (print-summary-when-finished #f)
   (amb (answer (prove '(foo ?x) ':answer '(ans ?x)))
        (answer (snark-closure))
        (answer (snark-closure))))
+
+(define (snarky-example-04)
+  (set-up-snark)
+  (set-up-theory)
+  (answer (prove '(bar ?x) ':answer '(ans ?x))))
+
 

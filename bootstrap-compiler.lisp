@@ -123,9 +123,9 @@
                  (comp-const (second x) val? more?))
          (BEGIN  (comp-begin (rest x) env val? more?))
          (LSET!   (arg-count x 2)
-                 (assert (symbolp (second x)) (x)
-                         "Only symbols can be lset!, not ~a in ~a"
-                         (second x) x)
+                 (cl:assert (symbolp (second x)) (x)
+                            "Only symbols can be lset!, not ~a in ~a"
+                            (second x) x)
                  (seq (comp (third x) env t t)
                       (gen-set (second x) env)
                       (if (not val?) (gen 'POP))
@@ -143,9 +143,9 @@
 (defun arg-count (form min &optional (max min))
   "Report an error if form has wrong number of args."
   (let ((n-args (length (rest form))))
-    (assert (<= min n-args max) (form)
-      "Wrong number of arguments for ~a in ~a: 
-       ~d supplied, ~d~@[ to ~d~] expected"
+    (cl:assert (<= min n-args max) (form)
+               "Wrong number of arguments for ~a in ~a: 
+                ~d supplied, ~d~@[ to ~d~] expected"
       (first form) form n-args min (if (/= min max) max))))
 
 ;;; ==============================
@@ -235,7 +235,7 @@
 		(unless more? (gen 'RETURN)))))
       ((and (starts-with f 'lambda) (null (second f)))
        ;; ((lambda () body)) => (begin body)
-       (assert (null args) () "Too many arguments supplied")
+       (cl:assert (null args) () "Too many arguments supplied")
        (comp-begin (rest2 f) env val? more?))
       (more? ; Need to save the continuation point
        (let ((k (gen-label 'k)))
@@ -464,6 +464,7 @@
 
 (defparameter *par-t-top-level*
   '(call/cc (lambda (cc)
+              (clear-all-choice-points)
 	      (letrec ((%result '())
                        (par-t (lambda ()
                                 (newline)
@@ -482,7 +483,7 @@
 
 (defun par-t (&key (load-examples t)
                    (load-standard-library nil)
-                   (thread-time-slice 45))
+                   (thread-time-slice 50))
   "A compiled Par-T read-eval-print loop"
   (cond (load-examples
          (load-par-t-examples))
@@ -539,7 +540,7 @@
 
 (defmacro def-optimizer (opcodes args &body body)
   "Define assembly language optimizers for these opcodes."
-  (assert (and (listp opcodes) (listp args) (= (length args) 3)))
+  (cl:assert (and (listp opcodes) (listp args) (= (length args) 3)))
   `(dolist (op ',opcodes)
      (put-optimizer op #'(lambda ,args .,body))))
 

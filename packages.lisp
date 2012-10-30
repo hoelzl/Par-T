@@ -10,6 +10,11 @@
 (defpackage #:parallel-thetis
   (:use #:common-lisp)
   ;;; Lisp Functions
+  (:shadowing-import-from #:snark #:assert)
+  (:import-from #:snark-lisp 
+                #:iff #:implies
+                #:implied-by #:xor #:nand #:nor
+                #:forall #:exists)
   (:export 
    #:compiler #:comp-show #:comp-go #:par-t
    #:init-par-t-comp

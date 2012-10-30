@@ -71,8 +71,8 @@
 
 (defun make-thread-state (&key fn code (pc 0) env stack (locale (top-level-locale))
                                (n-args 0) instr thread)
-  (assert fn (fn)
-          "Cannot create a thread-state without function.")
+  (cl:assert fn (fn)
+             "Cannot create a thread-state without function.")
   (unless code
     (setf code (fn-code fn)))
   (%make-thread-state fn code pc env stack locale n-args instr thread))
@@ -593,8 +593,8 @@ Returns four values:
   (check-type state thread-state)
   (dotimes (tick ticks (values :time-slice-exhausted nil))
     #+debug-poem-vm
-    (assert (< (thread-state-pc state) (length (thread-state-code state))) ()
-            "Program counter out of range.")
+    (cl:assert (< (thread-state-pc state) (length (thread-state-code state))) ()
+               "Program counter out of range.")
     (setf (thread-state-instr state)
           (elt (thread-state-code state) (thread-state-pc state)))
     #+debug-poem-vm
