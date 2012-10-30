@@ -14,6 +14,11 @@
   (newline)
   args)
 
+(define (as-lisp-boolean par-t-obj)
+  (if (eq? par-t-obj #f)
+      'cl::nil
+      'cl::t))
+
 ;;; Macro Expansion
 ;;; ===============
 

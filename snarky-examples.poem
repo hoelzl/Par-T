@@ -1,0 +1,38 @@
+;;; Copyright (c) 2012 Matthias Hölzl
+;;; 
+;;; This file is licensed under the MIT license; see the file LICENSE
+;;; in the root directory for further information.
+
+(herald "Examples for Snark")
+
+(define (set-up-snark)
+  (initialize-snark)
+  (use-resolution)
+  (use-hyperresolution)
+  (use-paramodulation)
+  (use-subsumption)
+  (use-term-ordering)
+  (use-default-ordering))
+
+(define (set-up-theory)
+  (assert '(foo x))
+  (assert '(foo y)))
+
+(define (snarky-example-01)
+  (set-up-snark)
+  (set-up-theory)
+  (prove '(foo ?x) ':answer '(ans ?x)))
+
+(define (snarky-example-02)
+  (set-up-snark)
+  (set-up-theory)
+  (prove '(foo ?x) ':answer '(ans ?x))
+  (snark-closure))
+
+(define (snarky-example-03)
+  (set-up-snark)
+  (set-up-theory)
+  (amb (prove '(foo ?x) ':answer '(ans ?x))
+       (snark-closure)
+       (snark-closure)))
+

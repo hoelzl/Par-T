@@ -484,7 +484,9 @@
                    (thread-time-slice 45))
   "A compiled Par-T read-eval-print loop"
   (cond (load-examples
-         (load-par-t-examples))
+         (load-par-t-examples)
+         (when (member :snarky-t *features*)
+           (load-snarky-t-examples)))
         (load-standard-library
          (load-par-t-standard-library)))
   (let ((*default-thread-time-slice* thread-time-slice))
@@ -657,6 +659,11 @@
   (let ((filename (par-t-system-file "examples")))
     (load-par-t-file filename)))
 
+(defun load-snarky-t ()
+  (load-par-t-file (par-t-system-file "snark-interface")))
+
+(defun load-snarky-t-examples ()
+  (load-par-t-file (par-t-system-file "snarky-examples")))
 
 ;;; Set-up the compiler.
 ;;; ===================
