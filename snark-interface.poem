@@ -3,6 +3,8 @@
 ;;; This file is licensed under the MIT license; see the file LICENSE
 ;;; in the root directory for further information.
 
+(herald "Snark Interface")
+
 (define (initialize-snark . args)
   (lisp-call 'snark::initialize args))
 
@@ -117,14 +119,20 @@
 (define (prove . args)
   (lisp-call 'snark::prove args))
 
-(define (answer . args)
-  (convert-nil-to-false (lisp-call 'snark::answer args)))
-
 (define (sort-name? . args)
   (lisp-call 'snark::sort-name? args))
 
-;;; TODO: This should be recognized as false by the VM.
-(define snark-false 'snark-lisp:false)
-
 (define (snark-closure)
   (lisp-call 'snark::closure '()))
+
+;;; TODO: This should be recognized as false by the VM.
+(define $snark-false 'snark-lisp:false)
+
+(define (convert-snark-false obj)
+  (if (and obj (not (eq? obj $snark-false)))
+      obj
+      #f))
+
+(define (answer . args)
+  (convert-snark-false
+   (lisp-call 'snark::answer args)))

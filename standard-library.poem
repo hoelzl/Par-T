@@ -16,8 +16,8 @@
 
 (define (as-lisp-boolean par-t-obj)
   (if (eq? par-t-obj #f)
-      'cl::nil
-      'cl::t))
+      'cl:nil
+      'cl:t))
 
 (define (convert-nil-to-false par-t-obj)
   (if (eq? par-t-obj 'cl::nil)

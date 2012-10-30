@@ -7,5 +7,3 @@
 
 (in-package :parallel-thetis)
 
-(load-snarky-t)
-(pushnew :snarky-t *features*)

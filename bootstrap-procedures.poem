@@ -28,6 +28,18 @@
 	     (cons (car lst1) (append2 (cdr lst1) lst2)))))
 (name! append2 'append2)
 
+(lset! convert-false-to-nil
+       (lambda (obj)
+	 (if (eq? obj #f)
+	     'cl:nil
+	     (if (pair? obj)
+		 (map1 convert-false-to-nil obj)
+		 obj))))
+
+(lset! lisp-call
+       (lambda (fun args)
+	 (%lisp-call fun (map1 convert-false-to-nil args))))
+
 (lset! as-par-t-boolean
        (lambda (lisp-boolean)
 	 (lisp-call 'as-par-t-boolean

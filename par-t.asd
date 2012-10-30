@@ -6,9 +6,9 @@
   :version "0.0.1"
   :author "Matthias Hoelzl <tc@xantira.com>"
   :license "MIT, see file LICENSE"
-  :depends-on () #+(or) (#:alexandria)
+  :depends-on (#:snark)
   :components ((:file "packages")
 	       (:file "utilities")
 	       (:file "vm")
 	       (:file "bootstrap-compiler")))
-  
+

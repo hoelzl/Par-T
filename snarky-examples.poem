@@ -32,7 +32,8 @@
 (define (snarky-example-03)
   (set-up-snark)
   (set-up-theory)
-  (amb (prove '(foo ?x) ':answer '(ans ?x))
-       (snark-closure)
-       (snark-closure)))
+  (print-summary-when-finished '())
+  (amb (answer (prove '(foo ?x) ':answer '(ans ?x)))
+       (answer (snark-closure))
+       (answer (snark-closure))))
 

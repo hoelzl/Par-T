@@ -445,8 +445,8 @@
 		    (RETURN))))
 
   ;; Lisp functions
-  (set-global-var! 'lisp-call
-    (new-fn :name 'lisp-call :args '(function-name args)
+  (set-global-var! '%lisp-call
+    (new-fn :name '%lisp-call :args '(function-name args)
             :code '((ARGS 2)
                     (LVAR 0 0 ";" function-name)
                     (LVAR 0 1 ";" args)
@@ -469,6 +469,7 @@
                                 (newline)
                                 (display "=> ")
                                 (lset! %result ((compiler (read))))
+                                (newline)
                                 (write %result)
                                 (par-t))))
                       (set! quit (lambda ()
@@ -484,9 +485,7 @@
                    (thread-time-slice 45))
   "A compiled Par-T read-eval-print loop"
   (cond (load-examples
-         (load-par-t-examples)
-         (when (member :snarky-t *features*)
-           (load-snarky-t-examples)))
+         (load-par-t-examples))
         (load-standard-library
          (load-par-t-standard-library)))
   (let ((*default-thread-time-slice* thread-time-slice))
@@ -626,20 +625,23 @@
    (make-pathname :name name :type "poem")
    (directory-namestring (asdf:system-source-file :par-t))))
 
-(defun load-par-t-standard-library ()
+(defun load-par-t-standard-library (&key (print-heralds t))
   (let ((bootstrap-procs (par-t-system-file "bootstrap-procedures"))
         (macro-expander (par-t-system-file "macro-expander"))
         (macros (par-t-system-file "macros"))
         (stdlib (par-t-system-file "standard-library"))
+        (snarky-t (par-t-system-file "snark-interface"))
         (object-system (par-t-system-file "objects")))
     (flet ((print-herald (list)
-             (format t "Loading ~A~%" (first list))
-             (format t "Defined ~:W~%" (rest list))
-             (force-output)))
+             (when print-heralds
+               (format t "Loading ~A~%" (first list))
+               (format t "Defined ~:W~%" (rest list))
+               (force-output))))
       (print-herald (load-par-t-file bootstrap-procs))
       (print-herald (load-par-t-file macro-expander))
       (print-herald (load-par-t-file macros))
       (print-herald (load-par-t-file stdlib))
+      (print-herald (load-par-t-file snarky-t))
       (print-herald (load-par-t-file object-system)))))
 
 (defun load-par-t-compiler ()
@@ -654,15 +656,26 @@
 
 (defun load-par-t-examples ()
   (init-par-t-comp)
-  (load-par-t-standard-library)
+  (format *standard-output* "~&Loading Par-T Standard Library... ")
+  (force-output *standard-output*)
+  (load-par-t-standard-library :print-heralds nil)
+  (format *standard-output* "done.~%")
   (let ((filename (par-t-system-file "examples")))
-    (load-par-t-file filename)))
+    (format *standard-output* "~&Loading Par-T Examples... ")
+    (force-output *standard-output*)
+    (load-par-t-file filename)
+    (format *standard-output* "done.~%")
+    (when (member :snarky-t *features*)
+      (load-snarky-t-examples))))
 
 (defun load-snarky-t ()
   (load-par-t-file (par-t-system-file "snark-interface")))
 
 (defun load-snarky-t-examples ()
-  (load-par-t-file (par-t-system-file "snarky-examples")))
+  (format *standard-output* "~&Loading Snarky-T Examples... ")
+  (force-output *standard-output*)
+  (load-par-t-file (par-t-system-file "snarky-examples"))
+    (format *standard-output* "done.~%"))
 
 ;;; Set-up the compiler.
 ;;; ===================
@@ -673,6 +686,8 @@
 
 (init-par-t-comp)
 (load-par-t-standard-library)
+(pushnew :par-t *features*)
+(pushnew :snarky-t *features*)
 
 ;;; To allow quick testing after loading the system.
 (defun cl-user::load-and-run-all-par-t-tests ()
