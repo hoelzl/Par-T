@@ -1,4 +1,4 @@
-;;;; odysseus.asd
+;;;; par-t.asd
 
 (asdf:defsystem #:par-t
   :serial t

@@ -114,6 +114,7 @@
   (declare (optimize debug))
     (cond
       ((par-t-boolean-p x) (comp-const x val? more?))
+      ((null x) (comp-const x val? more?))
       ((symbolp x) (comp-var x env val? more?))
       ((atom x) (comp-const x val? more?))
       ((par-t-macro-p (first x)) (comp (par-t-macro-expand x) env val? more?))
@@ -248,8 +249,6 @@
        (seq (comp-list args env)
             (comp f env t t)
             (gen 'CALLJ (length args)))))))
-
-;;; ==============================
 
 ;;; ==============================
 
@@ -465,27 +464,31 @@
 
 (defparameter *par-t-top-level*
   '(call/cc (lambda (cc)
-	      (let ((%result '()))
-		(define par-t (lambda ()
-				 (newline)
-				 (display "=> ")
-				 (lset! %result ((compiler (read))))
-				 (write %result)
-				 (par-t)))
-		(define quit (lambda ()
-			       (cc %result)))
-		(par-t)))))
-
-(defun par-t ()
-  "A compiled Par-T read-eval-print loop"
-  (init-par-t-comp)
-  (let* ((par-t-code (compiler *par-t-top-level*))
-         (state (make-thread :fn par-t-code)))
-    (run state :locale (top-level-locale))))
+	      (letrec ((%result '())
+                       (par-t (lambda ()
+                                (newline)
+                                (display "=> ")
+                                (lset! %result ((compiler (read))))
+                                (write %result)
+                                (par-t))))
+                      (set! quit (lambda ()
+                                   (cc %result)))
+                      (par-t)))))
 
 (defun comp-go (exp)
   "Compile and execute the expression."
   (run (compiler `(exit ,exp))))
+
+(defun par-t (&key (load-examples t)
+                   (load-standard-library nil)
+                   (thread-time-slice 45))
+  "A compiled Par-T read-eval-print loop"
+  (cond (load-examples
+         (load-par-t-examples))
+        (load-standard-library
+         (load-par-t-standard-library)))
+  (let ((*default-thread-time-slice* thread-time-slice))
+    (comp-go *par-t-top-level*)))
 
 ;;;; Peephole Optimize-Bytecoder
 

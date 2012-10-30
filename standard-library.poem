@@ -305,10 +305,26 @@
   (apply append (apply map (cons proc lists))))
 
 
+;;; Numeric Functions
+;;; =================
+
+(define (mod m n)
+  (lisp-call 'mod (list m n)))
+
+(define (even? n)
+  (= 0 (mod n 2)))
+
+(define (odd? n)
+  (/= 0 (mod n 2)))
+
+
 ;;; Non-Deterministic Computation
 ;;; =============================
 
 (define choice-points '())
+
+(define (clear-all-choice-points)
+  (set! choice-points '()))
 
 (define (fail)
   (if (null? choice-points)
@@ -326,3 +342,9 @@
 	       (set! choice-points
 		     (append new-cps choice-points)))
 	     (fail))))
+
+(define-macro amb computations
+  `(create-choice-points ,@(map (lambda (comp)
+				  `(lambda () ,comp))
+				computations)))
+

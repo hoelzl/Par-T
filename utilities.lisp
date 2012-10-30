@@ -303,6 +303,7 @@
     (cadr 1 cadr nil nil) 
 
     ;; Threads
+    #+(or)
     (thread 0 current-thread nil nil)
     (spawn 3 spawn-thread true t)
 
