@@ -82,3 +82,55 @@
   (foo '(1 2 3))
   (display "Self-Application:") (newline)
   (foo foo))
+
+(define (example-05)
+  (define bar (make-generic 'bar))
+  (add-method bar
+	      (make-method (list <top> <top>)
+			   (lambda (call-next-method lhs rhs)
+			     (display "bar: ") (display (list lhs rhs)) (newline)
+			     (display (list 'bar '<top> '<top>)) (newline))))
+  (add-method bar
+	      (make-method (list <object> <object>)
+			   (lambda (call-next-method lhs rhs)
+			     (call-next-method)
+			     (display (list 'bar '<object> '<object>)) (newline))))
+  (add-method bar
+  	      (make-method (list <top> <pair>)
+  			   (lambda (call-next-method lhs rhs)
+  			     (call-next-method)
+  			     (display (list 'bar '<top> '<pair>)) (newline))))
+  (add-method bar
+  	      (make-method (list <pair> <top>)
+  			   (lambda (call-next-method lhs rhs)
+  			     (call-next-method)
+  			     (display (list 'bar '<pair> '<top>)) (newline))))
+  (add-method bar
+  	      (make-method (list <pair> <pair>)
+  			   (lambda (call-next-method lhs rhs)
+  			     (call-next-method)
+  			     (display (list 'bar '<pair> '<pair>)) (newline))))
+  (add-method bar
+  	      (make-method (list <top> <number>)
+  			   (lambda (call-next-method lhs rhs)
+  			     (call-next-method)
+  			     (display (list 'bar '<top> '<number>)) (newline))))
+  (add-method bar
+  	      (make-method (list <number> <top>)
+  			   (lambda (call-next-method lhs rhs)
+  			     (call-next-method)
+  			     (display (list 'bar '<number> '<top>)) (newline))))
+  (add-method bar
+  	      (make-method (list <number> <number>)
+  			   (lambda (call-next-method lhs rhs)
+  			     (call-next-method)
+  			     (display (list 'bar '<number> '<number>)) (newline))))
+  (bar :a :b)
+  (bar 123 :b)
+  (bar :a 456)
+  (bar 123 456)
+  (bar '(1) 456)
+  (bar 123 '(4))
+  (bar '(1) '(4))
+  (bar (make <object>) (make <object>)))
+
