@@ -115,6 +115,7 @@
     (cond
       ((par-t-boolean-p x) (comp-const x val? more?))
       ((null x) (comp-const x val? more?))
+      ((keywordp x) (comp-const x val? more?))
       ((symbolp x) (comp-var x env val? more?))
       ((atom x) (comp-const x val? more?))
       ((par-t-macro-p (first x)) (comp (par-t-macro-expand x) env val? more?))

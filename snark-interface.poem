@@ -125,11 +125,12 @@
 (define (snark-closure)
   (lisp-call 'snark::closure '()))
 
-;;; TODO: This should be recognized as false by the VM.
 (define $snark-false 'snark-lisp:false)
 
 (define (convert-snark-false obj)
-  (if (and obj (not (eq? obj $snark-false)))
+  (if (and obj
+	   (not (eq? obj $snark-false))
+	   (not (eq? obj cl:nil)))
       obj
       #f))
 

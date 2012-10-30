@@ -42,24 +42,24 @@
 
 (lset! as-par-t-boolean
        (lambda (lisp-boolean)
-	 (lisp-call 'as-par-t-boolean
-		    (list lisp-boolean))))
+	 (%lisp-call 'as-par-t-boolean
+		     (list lisp-boolean))))
 
 (lset! read
        (lambda ()
-	 (lisp-call 'par-t-read '())))
+	 (%lisp-call 'par-t-read '())))
 
 (lset! write
        (lambda (obj)
-	 (lisp-call 'par-t-write (list obj))))
+	 (%lisp-call 'par-t-write (list obj))))
 
 (lset! display
        (lambda (obj)
-	 (lisp-call 'display (list obj))))
+	 (%lisp-call 'display (list obj))))
 
 (lset! newline
        (lambda ()
-	 (lisp-call 'newline '())))
+	 (%lisp-call 'newline '())))
 
 (lset! random
        (lambda (obj)
@@ -68,7 +68,7 @@
 (lset! eof-object?
        (lambda (obj)
 	 (as-par-t-boolean
-	  (lisp-call 'eof-object-p (list obj)))))
+	  (%lisp-call 'eof-object-p (list obj)))))
 
 (lset! gensym
        (lambda (prefix)

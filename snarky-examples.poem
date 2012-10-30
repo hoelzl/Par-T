@@ -12,7 +12,9 @@
   (use-paramodulation)
   (use-subsumption)
   (use-term-ordering)
-  (use-default-ordering))
+  (use-default-ordering)
+  (print-options-when-starting #f)
+  (print-summary-when-finished #f))
 
 (define (set-up-theory)
   (assert '(foo x))
@@ -22,25 +24,24 @@
 (define (snarky-example-01)
   (set-up-snark)
   (set-up-theory)
-  (answer (prove '(foo ?x) ':answer '(ans ?x))))
+  (answer (prove '(foo ?x) :answer '(ans ?x))))
 
 (define (snarky-example-02)
   (set-up-snark)
   (set-up-theory)
-  (prove '(foo ?x) ':answer '(ans ?x))
+  (prove '(foo ?x) :answer '(ans ?x))
   (answer (snark-closure)))
 
 (define (snarky-example-03)
   (set-up-snark)
   (set-up-theory)
-  (print-summary-when-finished #f)
-  (amb (answer (prove '(foo ?x) ':answer '(ans ?x)))
+  (amb (answer (prove '(foo ?x) :answer '(ans ?x)))
        (answer (snark-closure))
        (answer (snark-closure))))
 
 (define (snarky-example-04)
   (set-up-snark)
   (set-up-theory)
-  (answer (prove '(bar ?x) ':answer '(ans ?x))))
+  (answer (prove '(bar ?x) :answer '(ans ?x))))
 
 
