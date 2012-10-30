@@ -19,6 +19,11 @@
       'cl::nil
       'cl::t))
 
+(define (convert-nil-to-false par-t-obj)
+  (if (eq? par-t-obj 'cl::nil)
+      #f
+      par-t-obj))
+
 ;;; Macro Expansion
 ;;; ===============
 
@@ -322,6 +327,15 @@
 (define (odd? n)
   (/= 0 (mod n 2)))
 
+
+;;; Loading files
+;;; =============
+
+(define (load file-name)
+  (lisp-call 'load-par-t-file (list file-name)))
+
+(define (system-file file-name)
+  (lisp-call 'par-t-system-file (list file-name)))
 
 ;;; Non-Deterministic Computation
 ;;; =============================

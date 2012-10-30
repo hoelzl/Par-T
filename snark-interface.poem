@@ -117,6 +117,9 @@
 (define (prove . args)
   (lisp-call 'snark::prove args))
 
+(define (answer . args)
+  (convert-nil-to-false (lisp-call 'snark::answer args)))
+
 (define (sort-name? . args)
   (lisp-call 'snark::sort-name? args))
 

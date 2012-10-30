@@ -493,9 +493,7 @@
     (comp-go *par-t-top-level*)))
 
 ;;;; Peephole Optimize-Bytecoder
-
-
-;;; ==============================
+;;; ============================
 
 (defun optimize-bytecode (code)
   "Perform peephole optimization on assembly code."
@@ -546,9 +544,9 @@
   `(dolist (op ',opcodes)
      (put-optimizer op #'(lambda ,args .,body))))
 
-;;;; Now for some additions and answers to exercises:
 
-;;; ==============================
+;;; Support for the Par-T Reader
+;;; ============================
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (unless (boundp 'eof)
@@ -604,7 +602,8 @@
                     (list 'unquote (read stream))))))
    nil *par-t-readtable*)
 
-;;; ==============================
+;;; Loading files
+;;; =============
 
 (defvar *trace-par-t-reader* nil)
 
