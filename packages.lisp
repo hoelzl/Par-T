@@ -17,7 +17,7 @@
                 #:forall #:exists)
   (:export 
    #:compiler #:comp-show #:comp-go #:par-t
-   #:init-par-t-comp
+   #:initialize-top-level-locale
    #:load-par-t-file  #:par-t-system-file
    #:load-par-t-standard-library
    #:load-par-t-compiler

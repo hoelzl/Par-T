@@ -18,8 +18,8 @@
 
 (in-package :parallel-thetis)
 
-(defun set-global-var! (var val)
-  (setf (get-var-in-locale var (top-level-locale))
+(defun set-global-var! (var val &optional (locale (top-level-locale)))
+  (setf (get-var-in-locale var locale)
         val))
 
 ;;; ==============================
@@ -94,9 +94,6 @@
   (when (and (fn-p fn) (null (fn-name fn)))
     (setf (fn-name fn) name))
   name)
-
-;;; This should probably go into init-par-t-comp
-(set-global-var! 'name! #'name!)
 
 (defun label-p (x) "Is x a label?" (atom x))
 
@@ -367,25 +364,28 @@
       (member (opcode instr) op)
       (eq (opcode instr) op)))
 
-(defun init-par-t-comp ()
+(defun initialize-top-level-locale (&optional (locale (top-level-locale)))
   "Initialize values (including call/cc) for the Par-T compiler."
   ;; Global constants
-  (set-global-var! 'true *true*)
-  (set-global-var! 'false *false*)
+  (set-global-var! 'true *true* locale)
+  (set-global-var! 'false *false* locale)
+  (set-global-var! 'name! #'name! locale)
 
   ;; Temporary definition needed for bootstrapping the compiler.
   (set-global-var! 'par-t-macro
     (new-fn :name 'par-t-macro :args '(symbol)
             :code '((ARGS 1)
                     (PAR-T-FALSE)
-                    (RETURN))))
+                    (RETURN)))
+    locale)
 
   ;;; Getting the current thread
   (set-global-var! 'current-thread
     (new-fn :name 'current-thread :args '()
             :code '((ARGS 0)
                     (THREAD)
-                    (RETURN))))
+                    (RETURN)))
+    locale)
 
   ;; Applying functions
   (let ((%%apply (new-fn :name '%%apply :args '(proc length lst)
@@ -418,31 +418,36 @@
                       (0)
                       (LVAR 0 1 ";" lst)
                       (LVAR 1 0 ";" %%apply)
-                      (CALLJ 3)))))
+                      (CALLJ 3)))
+      locale))
 
   ;; Leaving the compiler
   (set-global-var! 'exit 
-     (new-fn :name 'exit :args '(val) :code '((HALT))))
+     (new-fn :name 'exit :args '(val) :code '((HALT)))
+     locale)
 
   ;; Support for the object system
   (let ((class-metaclass
           (%allocate-instance nil (length *the-slots-of-a-class*))))
     (setf (pt-object-class class-metaclass) class-metaclass)
     (set-global-var! '<class> class-metaclass))
-  (set-global-var! '*the-slots-of-a-class* *the-slots-of-a-class*)
+  (set-global-var! '*the-slots-of-a-class* *the-slots-of-a-class*
+                   locale)
 
   ;; Continuation manipulation
   (set-global-var! 'call/cc
     (new-fn :name 'call/cc :args '(f)
             :code '((ARGS 1) (CC) (LVAR 0 0 ";" f)
-		    (CALLJ 1))))
+		    (CALLJ 1)))
+    locale)
 
   ;; File handling
   (set-global-var! 'herald
     (new-fn :name 'herald :args '(title . args)
 	    :code '((VARARGS 1)
 		    (LVAR 0 0 ";" title)
-		    (RETURN))))
+		    (RETURN)))
+    locale)
 
   ;; Lisp functions
   (set-global-var! '%lisp-apply
@@ -451,14 +456,16 @@
                     (LVAR 0 0 ";" function-name)
                     (LVAR 0 1 ";" args)
                     (LISP-APPLY)
-                    (RETURN))))
+                    (RETURN)))
+    )
 
   ;; Primitive functions
   (dolist (prim *primitive-fns*)
-     (setf (get-var-in-locale (prim-symbol prim) (top-level-locale))
-           (new-fn :name (prim-symbol prim)
-                   :code (seq (gen 'PRIM (prim-opcode prim))
-                              (gen 'RETURN))))))
+     (set-global-var! (prim-symbol prim)
+       (new-fn :name (prim-symbol prim)
+               :code (seq (gen 'PRIM (prim-opcode prim))
+                          (gen 'RETURN)))
+       locale)))
 
 ;;; ==============================
 
@@ -650,13 +657,13 @@
     (load-par-t-file filename)))
 
 (defun load-par-t-tests ()
-  (init-par-t-comp)
+  (initialize-top-level-locale)
   (load-par-t-standard-library)
   (let ((filename (par-t-system-file "tests")))
     (load-par-t-file filename)))
 
 (defun load-par-t-examples ()
-  (init-par-t-comp)
+  (initialize-top-level-locale)
   (format *standard-output* "~&Loading Par-T Standard Library... ")
   (force-output *standard-output*)
   (load-par-t-standard-library :print-heralds nil)
@@ -685,7 +692,7 @@
 ;;; have to remember calling it before we do something with the
 ;;; compiler in the toplevel.
 
-(init-par-t-comp)
+(initialize-top-level-locale)
 (load-par-t-standard-library)
 (pushnew :par-t *features*)
 (pushnew :snarky-t *features*)
