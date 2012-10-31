@@ -35,6 +35,7 @@
 (define (snarky-example-03)
   (set-up-snark)
   (set-up-theory)
+  (clear-all-choice-points)
   (amb (answer (prove '(foo ?x) :answer '(ans ?x)))
        (answer (snark-closure))
        (answer (snark-closure))))
