@@ -51,9 +51,9 @@
               (thread-id (thread-state-thread state))))))
 
 ;;; The state of a single thread running on the VM.  This might be directly
-;;; integrated into the VM, but having it in its own class gives us the
-;;; possibility to easily add different kinds of threads (e.g., compiled to
-;;; native code or Lua).
+;;; integrated into the thread struct, but having it in its own struct gives
+;;; us the possibility to easily add different kinds of threads (e.g.,
+;;; compiled to native code or Lua).
 ;;;
 (defstruct (thread-state (:constructor
                              %make-thread-state
@@ -441,11 +441,11 @@ Returns four values:
        ;; Set the active function to the function object on the stack.
        (let ((fun (pop (thread-state-stack state))))
          (set-up-call state fun (arg1 (thread-state-instr state)))))
-      (CALLJ-VARARGS
+      (CALLJ-NARGS
        ;; Set the active function to the function object on the stack and the
        ;; number of arguments to the second object on the stack.
-       (let* ((fun (pop (thread-state-stack state)))
-              (n-args (pop (thread-state-stack state))))
+       (let* ((n-args (pop (thread-state-stack state)))
+              (fun (pop (thread-state-stack state))))
          (set-up-call state fun n-args)))
       
       (ARGS

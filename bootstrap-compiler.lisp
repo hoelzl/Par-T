@@ -152,8 +152,7 @@
 ;;; ==============================
 
 (defun comp-begin (exps env val? more?)
-  "Compile a sequence of expressions,
-  returning the last one as the value."
+  "Compile a sequence of expressions, returning the last one as the value."
   (cond ((null exps) (comp-const *false* val? more?))
         ((length=1 exps) (comp (first exps) env val? more?))
         (t (seq (comp (first exps) env nil t)
@@ -408,9 +407,9 @@
                                  (POP)
                                  (JUMP LOOP)
                                  EXIT
-                                 (LVAR 0 1 ";" length)
                                  (LVAR 0 0 ";" proc)
-                                 (CALLJ-VARARGS)))))
+                                 (LVAR 0 1 ";" length)
+                                 (CALLJ-NARGS)))))
     (set-global-var! '%apply
       (new-fn :name '%apply :args '(proc lst)
               :env (list (vector %%apply))
