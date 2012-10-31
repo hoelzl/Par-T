@@ -489,6 +489,33 @@ Returns four values:
              (thread-state-stack state))
        (values t nil nil 'fn))
       
+      (LISP-CALL-1
+       (let* ((stack (thread-state-stack state))
+              (arg1 (pop stack))
+              (fun (fdefinition (pop stack))))
+         (push (funcall fun arg1) stack)
+         (setf (thread-state-stack state) stack))
+       (values t nil nil 'lisp-call-1))
+      
+      (LISP-CALL-2
+       (let* ((stack (thread-state-stack state))
+              (arg2 (pop stack))
+              (arg1 (pop stack))
+              (fun (fdefinition (pop stack))))
+         (push (funcall fun arg1 arg2) stack)
+         (setf (thread-state-stack state) stack))
+       (values t nil nil 'lisp-call-2))
+
+      (LISP-CALL-3
+       (let* ((stack (thread-state-stack state))
+              (arg3 (pop stack))
+              (arg2 (pop stack))
+              (arg1 (pop stack))
+              (fun (fdefinition (pop stack))))
+         (push (funcall fun arg1 arg2 arg3) stack)
+         (setf (thread-state-stack state) stack))
+       (values t nil nil 'lisp-call-3))
+
       (LISP-APPLY
        (let ((args (pop (thread-state-stack state)))
              (fun (fdefinition (pop (thread-state-stack state)))))

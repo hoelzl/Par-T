@@ -450,14 +450,41 @@
     locale)
 
   ;; Lisp functions
+  (set-global-var! 'lisp-call-1
+    (new-fn :name 'lisp-call-1 :args '(function-name arg1)
+            :code '((ARGS 2)
+                    (LVAR 0 0 ";" function-name)
+                    (LVAR 0 1 ";" arg1)
+                    (LISP-CALL-1)
+                    (RETURN))))
+
+  (set-global-var! 'lisp-call-2
+    (new-fn :name 'lisp-call-2 :args '(function-name arg1 arg2)
+            :code '((ARGS 3)
+                    (LVAR 0 0 ";" function-name)
+                    (LVAR 0 1 ";" arg1)
+                    (LVAR 0 2 ";" arg2)
+                    (LISP-CALL-2)
+                    (RETURN))))
+
+  (set-global-var! 'lisp-call-3
+    (new-fn :name 'lisp-call-3 :args '(function-name arg1 arg2 arg3)
+            :code '((ARGS 4)
+                    (LVAR 0 0 ";" function-name)
+                    (LVAR 0 1 ";" arg1)
+                    (LVAR 0 2 ";" arg2)
+                    (LVAR 0 3 ";" arg3)
+                    (LISP-CALL-3)
+                    (RETURN))))
+
+
   (set-global-var! '%lisp-apply
     (new-fn :name '%lisp-apply :args '(function-name args)
             :code '((ARGS 2)
                     (LVAR 0 0 ";" function-name)
                     (LVAR 0 1 ";" args)
                     (LISP-APPLY)
-                    (RETURN)))
-    )
+                    (RETURN))))
 
   ;; Primitive functions
   (dolist (prim *primitive-fns*)
