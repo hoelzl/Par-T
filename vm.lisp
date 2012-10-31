@@ -543,7 +543,7 @@ Returns four values:
           CONS CAR-SETTER CDR-SETTER
           %ALLOCATE-INSTANCE %ALLOCATE-ENTITY
           %INSTANCE-REF
-          NAME! PAR-T-EQ PAR-T-EQUAL PAR-T-EQL)
+          SET-NAME! PAR-T-EQ PAR-T-EQUAL PAR-T-EQL)
        (let ((stack (thread-state-stack state)))
          (setf (thread-state-stack state)
                (cons (funcall opcode (second stack) (first stack))

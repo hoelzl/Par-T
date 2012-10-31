@@ -89,7 +89,7 @@
 
 ;;; ==============================
 
-(defun name! (fn name)
+(defun set-name! (fn name)
   "Set the name field of fn, if it is an un-named fn."
   (when (and (fn-p fn) (null (fn-name fn)))
     (setf (fn-name fn) name))
@@ -369,7 +369,7 @@
   ;; Global constants
   (set-global-var! 'true *true* locale)
   (set-global-var! 'false *false* locale)
-  (set-global-var! 'name! #'name! locale)
+  (set-global-var! 'set-name! #'set-name! locale)
 
   ;; Temporary definition needed for bootstrapping the compiler.
   (set-global-var! 'par-t-macro

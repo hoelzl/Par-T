@@ -1,3 +1,8 @@
+;;; Copyright (c) 2012 Matthias Hölzl
+;;; 
+;;; This file is licensed under the MIT license; see the file LICENSE
+;;; in the root directory for further information.
+
 (herald "Macros for the Par-T System")
 
 ;;; This would be quite a bit simpler if we had real syntax
@@ -86,7 +91,7 @@
 
 (define-macro define (name . body)
   (if (symbol? name)
-      `(name! (lset! ,name ,@body) ',name)
+      `(set-name! (lset! ,name ,@body) ',name)
       (macro-expand
        `(define ,(car name) 
 	  (lambda ,(cdr name) ,@body)))))

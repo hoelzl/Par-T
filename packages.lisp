@@ -39,7 +39,7 @@
    #:instance-class-setter! #:instance-proc-setter!
    #:%instance?
    #:instance-ref #:%instance-setter!
-   #:compiler #:name!
+   #:compiler #:set-name!
 
    ;; Bootstrap Procedures
    #:assq #:list #:map1 #:append2 #:as-par-t-boolean

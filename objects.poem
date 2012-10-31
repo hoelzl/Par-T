@@ -1,3 +1,15 @@
+;;; Based on the Tiny CLOS system.
+;;; Copyright (c) 1992 Xerox Corporation.  
+;;; See the file LICENSING for the original license
+;;;
+;;; Changes copyright (c) 2012 Matthias Hölzl
+;;; 
+;;; The changes are triple licensed under the original Tiny CLOS
+;;; license, the MIT license and the Norvig Software License
+;;; Agreement; see the file LICENSE in the root directory for further
+;;; information.
+
+
 (herald "Par-T object system")
 
 ;;; Topological Sort and Class-Precedence-List Computation

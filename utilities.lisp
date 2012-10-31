@@ -320,7 +320,7 @@
 
     ;; Misc stuff
     (compiler 1 compiler t nil) 
-    (name! 2 name! true t)))
+    (set-name! 2 set-name! true t)))
   
 
 (defun primitive-p (f env n-args)

@@ -1,3 +1,8 @@
+;;; Copyright (c) 2012 Matthias Hölzl
+;;; 
+;;; This file is licensed under the MIT license; see the file LICENSE
+;;; in the root directory for further information.
+
 (herald "Macro Expander")
 
 ;;; Handling of Par-T macros in Par-T
@@ -21,7 +26,7 @@
 			     *par-t-macros*))))
 	  (assq name *par-t-macros*))
 	 (list 'quote name)))
-(name! %define-macro '%define-macro)
+(set-name! %define-macro '%define-macro)
 
 (lset! *par-t-macros*
        (cons (cons 'define-macro %define-macro) '()))
@@ -37,7 +42,7 @@
 		(if binding (cdr binding) #f))
 	      (assq symbol *par-t-macros*))
 	     #f)))
-(name! par-t-macro 'par-t-macro)
+(set-name! par-t-macro 'par-t-macro)
 
 (lset! macro-expand
        (lambda (exp)
@@ -48,6 +53,6 @@
 		    exp))
 	      (par-t-macro (car exp)))
 	     exp)))
-(name! macro-expand 'macro-expand)
+(set-name! macro-expand 'macro-expand)
 
 

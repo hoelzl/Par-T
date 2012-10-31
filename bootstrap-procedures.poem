@@ -1,3 +1,8 @@
+;;; Copyright (c) 2012 Matthias Hölzl
+;;; 
+;;; This file is licensed under the MIT license; see the file LICENSE
+;;; in the root directory for further information.
+
 (herald "Bootstrap Procedures")
 
 ;;; List Manipulation
@@ -9,24 +14,24 @@
 	     (if (eq? object (car (car alist)))
 		 (car alist)
 		 (assq object (cdr alist))))))
-(name! assq 'assq)
+(set-name! assq 'assq)
 
 (lset! list (lambda args args))
-(name! list 'list)
+(set-name! list 'list)
 
 (lset! map1 
        (lambda (proc lst)
 	 (if (null? lst)
 	     '()
 	     (cons (proc (car lst)) (map1 proc (cdr lst))))))
-(name! map1 'map1)
+(set-name! map1 'map1)
 
 (lset! append2 
        (lambda (lst1 lst2)
 	 (if (null? lst1)
 	     lst2
 	     (cons (car lst1) (append2 (cdr lst1) lst2)))))
-(name! append2 'append2)
+(set-name! append2 'append2)
 
 (lset! convert-false-to-nil
        (lambda (obj)
@@ -80,7 +85,7 @@
 (lset! eval
        (lambda (form)
 	 ((compiler form))))
-(name! eval 'eval)
+(set-name! eval 'eval)
 
 (lset! constant?
        (lambda (form)
@@ -91,7 +96,7 @@
 		 (if (pair? form)
 		     (eq? (car form) 'quote)
 		     #f)))))
-(name! constant? 'constant?)
+(set-name! constant? 'constant?)
 
 ;;; Quasiquotation
 ;;; ==============
@@ -105,7 +110,7 @@
 		     (cons 'list (cons left (cdr right)))
 		     (list 'cons left right))
 		 (list 'cons left  right)))))
-(name! combine-non-constant-quasiquote
+(set-name! combine-non-constant-quasiquote
        'combine-non-constant-quasiquote)
 
 (lset! combine-quasiquote
@@ -119,7 +124,7 @@
 		     (list 'quote (cons (eval left) (eval right))))
 		 (combine-non-constant-quasiquote left right form))
 	     (combine-non-constant-quasiquote left right form))))
-(name! combine-quasiquote 'combine-quasiquote)
+(set-name! combine-quasiquote 'combine-quasiquote)
 
 (lset! expand-quasiquote
        (lambda (form)
@@ -149,4 +154,4 @@
 		 (if (constant? form)
 		     form
 		     (list 'quote form))))))
-(name! expand-quasiquote 'expand-quasiquote)
+(set-name! expand-quasiquote 'expand-quasiquote)

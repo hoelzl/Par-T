@@ -1,3 +1,8 @@
+;;; Copyright (c) 2012 Matthias Hölzl
+;;; 
+;;; This file is licensed under the MIT license; see the file LICENSE
+;;; in the root directory for further information.
+
 (herald "Par-T-Standard-Library")
 
 (define else #t)
