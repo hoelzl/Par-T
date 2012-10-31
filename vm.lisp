@@ -248,12 +248,13 @@ THREAD-GROUP."))
                          (group nil)
                          (blocked-p nil)
                          (priority 0)
-                         (detached-p nil))
+                         (detached-p nil)
+                         (locale (top-level-locale)))
   (when (eql parent *false*)
     (setf parent nil))
   (let ((result (%make-thread id parent group blocked-p priority priority detached-p)))
     (setf (thread-state result)
-          (make-thread-state :fn fn :thread result))
+          (make-thread-state :fn fn :thread result :locale locale))
     (unless group
       (progn 
         (setf group
@@ -327,8 +328,8 @@ THREAD-GROUP."))
 #+optimize-poem-vm
 (declaim (inline run-thread-1-step))
 
-(defun run-thread-1-step (state locale)
-  "Runs the thread with state STATE for a single step using LOCALE.
+(defun run-thread-1-step (state)
+  "Runs the thread with state STATE for a single step.
 Returns four values:
 
   * continue?: 
@@ -348,7 +349,8 @@ Returns four values:
     a reason for the error, or the opcode of the instruction that was
     executed if there was no error"
   (let* ((instr (thread-state-instr state))
-         (opcode (opcode instr)))
+         (opcode (opcode instr))
+         (locale (thread-state-locale state)))
     (case opcode
       ;; Variable/stack manipulation instructions:
       (LVAR
@@ -586,8 +588,7 @@ Returns four values:
 #+optimize-poem-vm
 (declaim (inline run-thread))
 
-(defun run-thread (state &key (locale (top-level-locale))
-                              (ticks *default-thread-time-slice*))
+(defun run-thread (state &key (ticks *default-thread-time-slice*))
   "Run the abstract machine on the code for f."
   #+debug-poem-vm
   (check-type state thread-state)
@@ -601,18 +602,18 @@ Returns four values:
     (print-trace-information state)
     (incf (thread-state-pc state))
     (multiple-value-bind (continue? error? value reason)
-        (run-thread-1-step state locale)
+        (run-thread-1-step state)
       (unless continue?
         (if error?
             (error "Runtime error: ~A~%  State: ~:W" reason state)
             (return-from run-thread (values :done value)))))))
 
-(defun run-loop (group thread state locale ticks)
+(defun run-loop (group thread state ticks)
   (let ((value :no-value)
         (scheduler (thread-group-scheduler group)))
     (loop
       (multiple-value-bind (exit-status thread-value)
-          (run-thread state :locale locale :ticks ticks)
+          (run-thread state :ticks ticks)
         (ccase exit-status 
           (:done
            (setf (thread-completed-p thread) t
@@ -636,28 +637,31 @@ Returns four values:
 
   (:method ((fn fn) &key (locale (top-level-locale))
                          (ticks *default-thread-time-slice*))
-    (let* ((thread (make-thread :fn fn))
+    (let* ((thread (make-thread :fn fn :locale locale))
            (state (thread-state thread))
            (group (thread-group thread)))
-      (run-loop group thread state locale ticks)))
+      (run-loop group thread state ticks)))
 
   (:method ((thread thread) &key (locale (top-level-locale))
                                  (ticks *default-thread-time-slice*))
     (run (thread-group thread) thread (thread-state thread) locale ticks))
 
-  (:method ((group thread-group) &key (locale (top-level-locale))
+  (:method ((group thread-group) &key (locale nil)
                                       (ticks *default-thread-time-slice*))
+    (cl:assert (not locale) ()
+               "Cannot assign a locale to a thread group.")
     (multiple-value-bind (thread scheduler-ticks)
         (schedule (thread-group-scheduler group) group)
       (cond (thread
              (when scheduler-ticks
                (setf ticks scheduler-ticks))
-             (run-loop group thread (thread-state thread) locale ticks))
+             (run-loop group thread (thread-state thread) ticks))
             (t :no-thread))))
 
-  (:method ((state thread-state) &key (locale (top-level-locale))
+  (:method ((state thread-state) &key (locale nil)
                                       (ticks *default-thread-time-slice*))
+    (cl:assert (not locale) ()
+               "RUN cannot assign a new locale to a thread state.")
     (let* ((thread (thread-state-thread state))
            (group (thread-group thread)))
-      (run-loop group thread state locale ticks))))
-
+      (run-loop group thread state ticks))))
