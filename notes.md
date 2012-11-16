@@ -1,6 +1,15 @@
 Some notes about the implementation of Par-T
 ============================================
 
+Naming Conventions
+------------------
+
+There are many things for which we currently have no consistent naming
+convention in the code.  For example things relating to
+functions/procedures/entities are sometimes named `*fn*`, `*fun*` or
+`*proc*`.  Simlar for locales/environments.  We should clarify our
+naming conventions and stick with them.
+
 Side Effects
 ------------
 
