@@ -260,9 +260,8 @@ THREAD-GROUP."))
         (setf group
               (if parent
                   (thread-group parent)
-                  (progn
-                    (make-thread-group :main-thread result
-                                       :threads '()))))
+                  (make-thread-group :main-thread result
+                                     :threads '())))
         (initialize-scheduler (thread-group-scheduler group) group)))
     (setf (thread-group result) group)
     (schedule-new-thread (thread-group-scheduler group) group result)
@@ -354,15 +353,13 @@ Returns four values:
     (case opcode
       ;; Variable/stack manipulation instructions:
       (LVAR
-       (let* ((instr (thread-state-instr state))
-              (env (thread-state-env state))
+       (let* ((env (thread-state-env state))
               (env-frame (elt env (arg1 instr))))
          (push (elt env-frame (arg2 instr))
                (thread-state-stack state)))
        (values t nil nil 'lvar))
       (LSET
-       (let* ((instr (thread-state-instr state))
-              (env (thread-state-env state))
+       (let* ((env (thread-state-env state))
               (env-frame (elt env (arg1 instr))))
          (setf (elt env-frame (arg2 instr))
                (top (thread-state-stack state))))
@@ -451,8 +448,7 @@ Returns four values:
          (set-up-call state fun n-args)))
       
       (ARGS
-       (let* ((instr (thread-state-instr state))
-              (n-req (arg1 instr))
+       (let* ((n-req (arg1 instr))
               (n-args (thread-state-n-args state)))
          (cond ((not (= n-args n-req))
                 (values nil t nil (list 'bad-args n-req n-args)))
@@ -465,8 +461,7 @@ Returns four values:
                   (setf (thread-state-stack state) stack))
                 (values t nil nil 'args)))))
       (VARARGS
-       (let* ((instr (thread-state-instr state))
-              (n-req (arg1 instr))
+       (let* ((n-req (arg1 instr))
               (n-args (thread-state-n-args state)))
          (cond ((< n-args n-req)
                 (values nil t nil (list 'bad-varargs n-req n-args)))
