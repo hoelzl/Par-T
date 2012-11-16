@@ -28,6 +28,9 @@
 ;;; Support for threads
 ;;; ===================
 
+(defun thread-state-code (state)
+  (fun-code (thread-state-fn state)))
+
 (defun print-thread-state (state stream depth)
   (declare (ignore depth))
   ;; This is necessary, since threads may appear on the stack, and they
@@ -57,10 +60,9 @@
 ;;;
 (defstruct (thread-state (:constructor
                              %make-thread-state
-                             (fn code pc env stack locale n-args instr thread))
+                             (fn pc env stack locale n-args instr thread))
                          (:print-function print-thread-state))
   (fn nil :type (or fn pt-entity))
-  (code nil)
   (pc 0 :type (integer 0))
   (env '())
   (stack '())
@@ -69,13 +71,11 @@
   (instr nil)
   (thread nil))
 
-(defun make-thread-state (&key fn code (pc 0) env stack (locale (top-level-locale))
+(defun make-thread-state (&key fn (pc 0) env stack (locale (top-level-locale))
                                (n-args 0) instr thread)
   (cl:assert fn (fn)
              "Cannot create a thread-state without function.")
-  (unless code
-    (setf code (fn-code fn)))
-  (%make-thread-state fn code pc env stack locale n-args instr thread))
+  (%make-thread-state fn pc env stack locale n-args instr thread))
 
 (defun print-thread (thread stream depth)
   (declare (ignore depth))

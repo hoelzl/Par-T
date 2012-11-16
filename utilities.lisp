@@ -241,6 +241,14 @@
   (setf (svref (pt-object-slots obj) index) new-value))
 
 
+;;; Accessing a function's code
+;;; ===========================
+
+(defun fun-code (funlike)
+  (typecase funlike
+    (fn (fn-code funlike))
+    (pt-entity (fn-code (pt-entity-proc funlike)))))
+
 ;;; Print functions
 ;;; ===============
 
