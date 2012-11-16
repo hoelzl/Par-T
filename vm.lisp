@@ -348,8 +348,7 @@ Returns four values:
     a reason for the error, or the opcode of the instruction that was
     executed if there was no error"
   (let* ((instr (thread-state-instr state))
-         (opcode (opcode instr))
-         (locale (thread-state-locale state)))
+         (opcode (opcode instr)))
     (case opcode
       ;; Variable/stack manipulation instructions:
       (LVAR
@@ -365,7 +364,8 @@ Returns four values:
                (top (thread-state-stack state))))
        (values t nil nil 'lset))
       (GVAR 
-       (let ((var (arg1 (thread-state-instr state))))
+       (let ((var (arg1 (thread-state-instr state)))
+             (locale (thread-state-locale state)))
          (multiple-value-bind (value presentp)
              (get-var-in-locale var locale)
            (cond (presentp
@@ -378,8 +378,9 @@ Returns four values:
                  (t
                   (values nil t nil (list 'unbound-variable var)))))))
       (GSET
-       (setf (get-var-in-locale (arg1 (thread-state-instr state)) locale)
-             (top (thread-state-stack state)))
+       (let ((locale (thread-state-locale state)))
+         (setf (get-var-in-locale (arg1 (thread-state-instr state)) locale)
+               (top (thread-state-stack state))))
        (values t nil nil 'gset))
       (POP
        (pop (thread-state-stack state))
