@@ -475,11 +475,12 @@ Returns four values:
                 (values t nil nil 'varargs)))))
       
       (FN
-       (push (make-fn :code (fn-code (arg1 (thread-state-instr state)))
-                      :name (fn-name (arg1 (thread-state-instr state)))
-                      :args (fn-args (arg1 (thread-state-instr state)))
-                      :env (thread-state-env state)) 
-             (thread-state-stack state))
+       (let ((fun (arg1 (thread-state-instr state))))
+         (push (make-fn :code (fn-code fun)
+                        :name (fn-name fun)
+                        :args (fn-args fun)
+                        :env (thread-state-env state)) 
+               (thread-state-stack state)))
        (values t nil nil 'fn))
       
       (LISP-CALL-1
