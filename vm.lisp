@@ -414,10 +414,16 @@ Returns four values:
        (values t nil nil 'save))
       (RETURN
         ;; The return value is the top of the stack; the return-address is
-        ;; second if we don't return from the top level.
+        ;; second if we don't return from the initial function of a thread.
         (let* ((stack (thread-state-stack state))
                (ret-addr (second stack)))
-          (cond ((and ret-addr (ret-addr-p ret-addr))
+          (cond ((null ret-addr)
+                 ;; We are trying to return from the top level. This happens
+                 ;; when we return from the outer function of a thread.
+                 ;; TODO: Maybe set up an initial return address when
+                 ;; starting a thread and classify this as an error?
+                 (values nil nil (first stack) 'top-level-return))
+                (t
                  (let ((fun (ret-addr-fn ret-addr)))
                    (setf (thread-state-fn state) fun
                          (thread-state-code state) (fn-code fun)
@@ -426,16 +432,7 @@ Returns four values:
                  ;; Get rid of the return-address, but keep the value on the
                  ;; stack.
                  (setf (thread-state-stack state) (cons (first stack) (rest2 stack)))
-                 (values t nil nil 'return))
-                (t
-                 ;; We are trying to return from the top level. This happens
-                 ;; in particular when call/cc captures the outermost
-                 ;; continuation, since there is no return address (and no
-                 ;; value) on the stack.  It's not quite clear whether we
-                 ;; should classify this as an error or a normal way to halt
-                 ;; execution, but since we are currently using it in the
-                 ;; REPL, let's treat it as a normal return for now.
-                 (values nil nil (first stack) 'top-level-return)))))
+                 (values t nil nil 'return)))))
       
       (CALLJ
        ;; Set the active function to the function object on the stack.
