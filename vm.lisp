@@ -364,7 +364,7 @@ Returns four values:
                (top (thread-state-stack state))))
        (values t nil nil 'lset))
       (GVAR 
-       (let ((var (arg1 (thread-state-instr state)))
+       (let ((var (arg1 instr))
              (locale (thread-state-locale state)))
          (multiple-value-bind (value presentp)
              (get-var-in-locale var locale)
@@ -372,21 +372,21 @@ Returns four values:
                   #+debug-poem-vm
                   (when *trace-par-t-global-loads*
                     (format *trace-output*
-                            "~&>>> PT: accessing ~A~%" (arg1 (thread-state-instr state))))
+                            "~&>>> PT: accessing ~A~%" (arg1 instr)))
                   (push value (thread-state-stack state))
                   (values t nil nil 'gvar))
                  (t
                   (values nil t nil (list 'unbound-variable var)))))))
       (GSET
        (let ((locale (thread-state-locale state)))
-         (setf (get-var-in-locale (arg1 (thread-state-instr state)) locale)
+         (setf (get-var-in-locale (arg1 instr) locale)
                (top (thread-state-stack state))))
        (values t nil nil 'gset))
       (POP
        (pop (thread-state-stack state))
        (values t nil nil 'pop))
       (CONST
-       (push (arg1 (thread-state-instr state)) (thread-state-stack state))
+       (push (arg1 instr) (thread-state-stack state))
        (values t nil nil 'cost))
       (THREAD
        (push (thread-state-thread state) (thread-state-stack state))
@@ -394,20 +394,20 @@ Returns four values:
       
       ;; Branching instructions:
       (JUMP
-       (setf (thread-state-pc state) (arg1 (thread-state-instr state)))
+       (setf (thread-state-pc state) (arg1 instr))
        (values t nil nil 'jump))
       (FJUMP
        (when (eq *false* (pop (thread-state-stack state)))
-         (setf (thread-state-pc state) (arg1 (thread-state-instr state))))
+         (setf (thread-state-pc state) (arg1 instr)))
        (values t nil nil 'fjump))
       (TJUMP
        (when (not (eq *false* (pop (thread-state-stack state))))
-         (setf (thread-state-pc state) (arg1 (thread-state-instr state))))
+         (setf (thread-state-pc state) (arg1 instr)))
        (values t nil nil 'tjump))
       
       ;; Function call/return instructions:
       (SAVE
-       (push (make-ret-addr :pc (arg1 (thread-state-instr state))
+       (push (make-ret-addr :pc (arg1 instr)
                             :fn (thread-state-fn state)
                             :env (thread-state-env state))
              (thread-state-stack state))
@@ -437,7 +437,7 @@ Returns four values:
       (CALLJ
        ;; Set the active function to the function object on the stack.
        (let ((fun (pop (thread-state-stack state))))
-         (set-up-call state fun (arg1 (thread-state-instr state)))))
+         (set-up-call state fun (arg1 instr))))
       (CALLJ-NARGS
        ;; Set the active function to the function object on the stack and the
        ;; number of arguments to the second object on the stack.
@@ -475,7 +475,7 @@ Returns four values:
                 (values t nil nil 'varargs)))))
       
       (FN
-       (let ((fun (arg1 (thread-state-instr state))))
+       (let ((fun (arg1 instr)))
          (push (make-fn :code (fn-code fun)
                         :name (fn-name fun)
                         :args (fn-args fun)
@@ -517,7 +517,7 @@ Returns four values:
        (values t nil nil 'lisp-apply))
       
       (PRIM
-       (let ((fun (fdefinition (arg1 (thread-state-instr state))))
+       (let ((fun (fdefinition (arg1 instr)))
              (n-args (thread-state-n-args state))
              (args '())
              (stack (thread-state-stack state)))
@@ -547,7 +547,7 @@ Returns four values:
       ;; Nullary operations:
       #+(or)
       ((PAR-T-READ NEWLINE) 
-       (push (funcall (opcode (thread-state-instr state))) (thread-state-stack state)))
+       (push (funcall opcode) (thread-state-stack state)))
       
       ;; Unary operations:
       ((CAR CDR CADR PAR-T-NOT PAR-T-NULL
@@ -574,8 +574,7 @@ Returns four values:
       ;; Ternary operations:
       ((%INSTANCE-SETTER %INSTANCE-PROC-SETTER
                          SPAWN-THREAD)
-       (let ((stack (thread-state-stack state))
-             (opcode (opcode (thread-state-instr state))))
+       (let ((stack (thread-state-stack state)))
          (setf (thread-state-stack state)
                (cons (funcall opcode
                               (third stack) (second stack) (first stack))
@@ -592,7 +591,7 @@ Returns four values:
        (values t nil nil 'false))
 
       ((-1 0 1 2)
-       (push (opcode (thread-state-instr state)) (thread-state-stack state))
+       (push opcode (thread-state-stack state))
        (values t nil nil opcode))
       
       ;; Other:
