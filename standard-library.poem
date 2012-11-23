@@ -63,6 +63,14 @@
 	  ((null? (cdr args)) (car args))
 	  (else (cons (car args) (chase (cdr args)))))))
 
+(define (generate-list n fun)
+  (let iterate ((n n)
+		(tail '()))
+    (if (<= n 0)
+	tail
+	(iterate (- n 1) (cons (fun (- n 1)) tail)))))
+
+
 (define (cddr lst)
   (cdr (cdr lst)))
 
@@ -349,6 +357,18 @@
 
 (define (clear-all-choice-points)
   (set! choice-points '()))
+
+(define (next-choice-point?)
+  (not (null? choice-points)))
+
+;;; FIXME: This does not currently work.  Implement it properly once
+;;; we have composable continuations.
+(define (print-all-solutions)
+  (if (next-choice-point?)
+      (begin
+	(display (fail))
+	(newline)
+	(print-all-solutions))))
 
 (define (fail)
   (if (null? choice-points)
