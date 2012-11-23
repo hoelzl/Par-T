@@ -18,9 +18,13 @@
 #+(and optimize-poem-vm (not debug-poem-vm))
 (declare (optimize (speed 3) (safety 2) (compilation-speed 0) (space 1) (debug 0)))
 
-(defstruct ret-addr fn pc env)
+(defstruct ret-addr
+  "The return address of a function call"
+  fn pc env)
 
-(defun top (stack) (first stack))
+(defun top (stack)
+  "Return the topmost element of a stack"
+  (first stack))
 
 (defvar *trace-par-t-vm* nil)
 (defvar *trace-par-t-global-loads* nil)
@@ -29,6 +33,7 @@
 ;;; ===================
 
 (defun thread-state-code (state)
+  "Return the bytecode of corresponding to thread state STATE"
   (fun-code (thread-state-fn state)))
 
 (defun print-thread-state (state stream depth)
@@ -62,6 +67,7 @@
                              %make-thread-state
                              (fn pc env stack locale n-args instr thread))
                          (:print-function print-thread-state))
+  "The state of a single thread running on the VM"
   (fn nil :type (or fn pt-entity))
   (pc 0 :type (integer 0))
   (env '())
@@ -105,7 +111,7 @@
 ;;; 
 (defstruct (thread (:constructor
                        %make-thread
-                       (id parent %group blocked-p priority weight detached-p))
+                       (id parent %group blocked-p priority scheduling-info detached-p))
                    (:print-function print-thread))
   ;; A unique identifier for this thread.
   (id (gensym "THREAD-"))
@@ -125,9 +131,9 @@
   ;; The priority.  Threads withi higher priority should be preferred by the
   ;; scheduler to ones with lower priority.
   (priority 0 :type integer)
-  ;; Weight is initially the priority, but can be changed by the scheduler for
+  ;; Scheduling-Info is initially the priority, but can be changed by the scheduler for
   ;; to implement scheduling strategies.
-  (weight 0 :type integer)
+  (scheduling-info nil)
   ;; If true, the thread can be immediately collected after it has terminated
   ;; because nobody can wait for it.
   (detached-p nil :type (or null thread))
@@ -248,11 +254,12 @@ THREAD-GROUP."))
                          (group nil)
                          (blocked-p nil)
                          (priority 0)
+                         (scheduling-info priority)
                          (detached-p nil)
                          (locale (top-level-locale)))
   (when (eql parent *false*)
     (setf parent nil))
-  (let ((result (%make-thread id parent group blocked-p priority priority detached-p)))
+  (let ((result (%make-thread id parent group blocked-p priority scheduling-info detached-p)))
     (setf (thread-state result)
           (make-thread-state :fn fn :thread result :locale locale))
     (unless group
@@ -280,7 +287,6 @@ THREAD-GROUP."))
 (defun set-up-call (state fun call-n-args)
   (cond ((fn-p fun)
          (setf (thread-state-fn state) fun
-               (thread-state-code state) (fn-code fun)
                (thread-state-pc state) 0
                (thread-state-env state) (fn-env fun)
                (thread-state-n-args state) call-n-args)
@@ -294,7 +300,6 @@ THREAD-GROUP."))
                           (list 'bad-entity-call fun real-fun)))
                  (t
                   (setf (thread-state-fn state) real-fun
-                        (thread-state-code state) (fn-code real-fun)
                         (thread-state-pc state) 0
                         (thread-state-env state) (fn-env real-fun)
                         (thread-state-n-args state) call-n-args)
@@ -426,7 +431,6 @@ Returns four values:
                 (t
                  (let ((fun (ret-addr-fn ret-addr)))
                    (setf (thread-state-fn state) fun
-                         (thread-state-code state) (fn-code fun)
                          (thread-state-pc state) (ret-addr-pc ret-addr)
                          (thread-state-env state) (ret-addr-env ret-addr)))
                  ;; Get rid of the return-address, but keep the value on the
