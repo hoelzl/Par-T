@@ -134,3 +134,65 @@
   (bar '(1) '(4))
   (bar (make <object>) (make <object>)))
 
+;;; Some examples to demonstrate Poem.
+;;; =================================
+
+(define (fact n)
+  (if (<= n 0)
+      1
+      (* n (fact (- n 1)))))
+
+(define fact2
+  (lambda (n)
+    (if (<= n 0)
+	1
+	(* n (fact2 (- n 1))))))
+
+(define (example-10)
+  (every? (lambda (n)
+	    (= (fact n) (fact2 n)))
+	  '(-1 2 3 4)))
+
+(define (fact-iter n)
+  (letrec ((iterate (lambda (n acc)
+		      (if (<= n 0)
+			  acc
+			  (iterate (- n 1) (* n acc))))))
+    (iterate n 1)))
+
+(define (example-11)
+  (every? (lambda (n)
+	    (= (fact n) (fact-iter n)))
+	  '(-1 2 3 4 5 6)))
+
+(define (fact-iter-2 n)
+  (let iterate ((n n) (acc 1))
+    (if (<= n 0)
+	acc
+	(iterate (- n 1) (* n acc)))))
+
+(define (example-12)
+  (every? (lambda (n)
+	    (= (fact-iter n) (fact-iter-2 n)))
+	  '(-1 2 3 4 5 6)))
+
+(define (example-13)
+  (clear-all-choice-points)
+  (an-integer-between 0 3))
+
+(define (example-14)
+  (clear-all-choice-points)
+  (let ((x (an-integer-between 0 7)))
+    (if (< x 3)
+	(fail)
+	x)))
+
+(define (example-15)
+  (clear-all-choice-points)
+  (let ((x (an-integer-between 0 7))
+	(y (an-integer-between 2 5)))
+    (if (or (not (number? x))
+	    (not (number? y))
+	    (not (= (+ x y) 9)))
+	(fail)
+	(list x y))))
