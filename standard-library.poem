@@ -32,13 +32,13 @@
 ;;; Macro Expansion
 ;;; ===============
 
-;; (define (macro-expand-1 exp)
-;;   (if (pair? exp)
-;;       (let ((expander (par-t-macro (first exp))))
-;; 	(if expander
-;; 	    (apply expander (rest exp))
-;; 	    exp))
-;;       exp))
+(define (macro-expand-1 exp)
+  (if (pair? exp)
+      (let ((expander (par-t-macro (first exp))))
+	(if expander
+	    (apply expander (rest exp))
+	    exp))
+      exp))
 
 ;;; Function Calling
 ;;; ================

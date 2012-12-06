@@ -213,18 +213,20 @@
 	(error "No slot" slot-name "in instances of" class))))
 
 (define class-direct-slots
-    (lambda (class) (slot-ref class 'direct-slots)))
+  (lambda (class) (slot-ref class 'direct-slots)))
 (define class-direct-supers
-    (lambda (class) (slot-ref class 'direct-supers)))
+  (lambda (class) (slot-ref class 'direct-supers)))
 (define class-slots
-    (lambda (class) (slot-ref class 'slots)))
+  (lambda (class) (slot-ref class 'slots)))
 (define class-cpl
-    (lambda (class) (slot-ref class 'cpl)))
+  (lambda (class) (slot-ref class 'cpl)))
 (define class-name
-    (lambda (class) (slot-ref class 'name)))
+  (lambda (class) (slot-ref class 'name)))
 
 (define generic-methods
-    (lambda (generic) (slot-ref generic 'methods)))
+  (lambda (generic) (slot-ref generic 'methods)))
+(define generic-name
+  (lambda (generic) (slot-ref generic 'name)))
 
 (define method-specializers
     (lambda (method) (slot-ref method 'specializers)))
@@ -485,6 +487,7 @@
   (make-method (list <generic>)
     (lambda (call-next-method generic initargs)
       (call-next-method)
+      (slot-set! generic 'name (getl initargs :name))
       (slot-set! generic 'methods '())
       (%instance-proc-setter! (lambda args (error "Has no methods."))
 			      generic))))
@@ -603,3 +606,37 @@
 (define <thread>             (make-primitive-class '<thread>))
 (define <mutex>              (make-primitive-class '<mutex>))
 (define <condition-variable> (make-primitive-class '<condition-variable>))
+
+;;; Macros for the object system
+;;; ============================
+
+(define-macro define-class (name supers slots)
+  `(begin
+     (lset! ,name
+	    (make <class>
+	      :name ',name
+	      :direct-supers (if (null? ',supers)
+				 (list <object>)
+				 (list ,@supers))
+	      :direct-slots ',(map (lambda (slot)
+				     (car slot))
+				   slots)))
+     ',name))
+
+(define-macro define-generic (name)
+  `(begin
+     (define ,name (make-generic ',name))
+     ',name))
+
+(define-macro define-method (name args . body)
+  `(begin
+     (add-method ,name
+		 (make-method (list ,@(map (lambda (arg)
+					     (if (pair? arg) (cadr arg) <top>))
+					   args))
+			      (lambda (call-next-method
+				       ,@(map (lambda (arg)
+						(if (pair? arg) (car arg) arg))
+					      args))
+				,@body)))
+     ',name))

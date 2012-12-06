@@ -533,6 +533,7 @@
          (load-par-t-examples))
         (load-standard-library
          (load-par-t-standard-library)))
+  (format t "~2&Welcome to the Par-T system!~%")
   (let ((*default-thread-time-slice* thread-time-slice))
     (comp-go *par-t-top-level*)))
 
