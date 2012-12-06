@@ -45,4 +45,41 @@
   (set-up-theory)
   (answer (prove '(bar ?x) :answer '(ans ?x))))
 
+(define (snarky-example-05)
+  (begin (initialize-snark)
+	 (use-resolution) (use-paramodulation)
+	 (tell '(foo a))
+	 (tell '(foo b))
+	 (tell '(implies (foo ?x) (bar ?x))))
+  (ask '(bar ?x) '(ans ?x)))
+
+(define (snarky-example-06)
+  (begin (initialize-snark)
+	 (use-resolution) (use-paramodulation)
+	 (tell '(foo a))
+	 (tell '(foo b))
+	 (tell '(implies (foo ?x) (bar ?x))))
+  (if (ask '(bar ?x) '(ans ?x))
+      :bar
+      :not-bar))
+
+(define (snarky-example-07)
+  (begin (initialize-snark)
+	 (use-resolution) (use-paramodulation)
+	 (tell '(foo a))
+	 (tell '(foo b))
+	 (tell '(implies (foo ?x) (bar ?x))))
+  (if (ask '(baz ?x) '(ans ?x))
+      :baz
+      :not-baz))
+
+(define (snarky-example-08)
+  (begin (initialize-snark)
+	 (use-resolution) (use-paramodulation)
+	 (tell '(foo a))
+	 (tell '(foo b))
+	 (tell '(implies (foo ?x) (bar ?x))))
+  (amb (new-ask '(baz ?x) '(baz-ans ?x))
+       (new-ask '(bar ?x) '(bar-ans ?x))))
+
 

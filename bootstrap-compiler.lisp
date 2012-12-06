@@ -450,6 +450,13 @@
     locale)
 
   ;; Lisp functions
+  (set-global-var! 'lisp-call-0
+    (new-fn :name 'lisp-call-0 :args '(function-name)
+            :code '((ARGS 1)
+                    (LVAR 0 0 ";" function-name)
+                    (LISP-CALL-0)
+                    (RETURN))))
+
   (set-global-var! 'lisp-call-1
     (new-fn :name 'lisp-call-1 :args '(function-name arg1)
             :code '((ARGS 2)
@@ -499,6 +506,9 @@
 (defparameter *par-t-top-level*
   '(call/cc (lambda (cc)
               (clear-all-choice-points)
+              ;; (initialize-snark)
+              ;; (use-resolution)
+              ;; (use-paramodulation)
 	      (letrec ((%result '())
                        (par-t (lambda ()
                                 (newline)
@@ -516,7 +526,7 @@
   (run (compiler `(exit ,exp))))
 
 (defun par-t (&key (load-examples t)
-                   (load-standard-library nil)
+                   (load-standard-library t)
                    (thread-time-slice 50))
   "A compiled Par-T read-eval-print loop"
   (cond (load-examples

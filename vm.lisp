@@ -32,9 +32,16 @@
 ;;; Support for threads
 ;;; ===================
 
-(defun thread-state-code (state)
-  "Return the bytecode of corresponding to thread state STATE"
-  (fun-code (thread-state-fn state)))
+;;; The following structures implement the data for handling threads.  We have
+;;; a tree structure consisting of thread groups as nodes and threads as
+;;; leaves.
+
+;;; Thread state
+;;; ------------
+
+(defgeneric thread-code (state)
+  (:documentation
+   "Return the bytecode of corresponding to thread state STATE"))
 
 (defun print-thread-state (state stream depth)
   (declare (ignore depth))
@@ -49,7 +56,7 @@
                         #Args:~10T~A~%  Instr:~10T~A~%  ~
                         Thread:~10T~A"
               (thread-state-fn state)
-              (thread-state-code state)
+              (thread-code state)
               (thread-state-pc state)
               (thread-state-env state)
               (thread-state-stack state)
@@ -83,6 +90,51 @@
              "Cannot create a thread-state without function.")
   (%make-thread-state fn pc env stack locale n-args instr thread))
 
+
+;;; Threadlike
+;;; ----------
+
+;;; THREADLIKE provides the linkage for nodes in the thread tree.
+
+;;; TODO: Do we need to do something about the scheduler when suspending and
+;;; resuming threadlikes?
+
+(defstruct threadlike
+  ;; The parent node in the thread tree.
+  (parent nil :type (or null thread))
+  ;; THREADLIKES should only execute if SUSPENSION is NIL.  Otherwise, a value
+  ;; indicating why the thread is suspended should be stored here.
+  (suspension nil :type list))
+
+(defun thread-suspend (thread reason)
+  "Suspend a thread until it is resumed again.
+
+In contrast to a blocked thread, a threadlike that is suspended could be run,
+but is explicitly prevented from doing so by another thread.  Suspension can
+also be used to preven t a whole subtree of threadlikes from running."
+  (if (not (threadlike-suspension thread))
+      (setf (threadlike-suspension thread) (list reason))
+      (push reason (threadlike-suspension thread))))
+
+(defun thread-resume (thread reason)
+  "Resum a thread that has previously been blocked by REASON.  The behavios is
+undefined if THREAD is not currently suspended by reason."
+  (setf (threadlike-suspension thread)
+        (remove reason (threadlike-suspension thread))))
+
+
+;;; Subcontinuation controller
+;;; --------------------------
+
+(defstruct (subcontinuation-controller (:include threadlike)))
+
+
+;;; Thread
+;;; ------
+
+(defmethod thread-code ((state thread-state))
+    (fun-code (thread-state-fn state)))
+
 (defun print-thread (thread stream depth)
   (declare (ignore depth))
   (let ((*print-circle* t))
@@ -109,7 +161,8 @@
 ;;; their locales and so be more similar to threads with shared state that to
 ;;; processes.
 ;;; 
-(defstruct (thread (:constructor
+(defstruct (thread (:include threadlike)
+                   (:constructor
                        %make-thread
                        (id parent %group blocked-p priority scheduling-info detached-p))
                    (:print-function print-thread))
@@ -118,9 +171,6 @@
   ;; The THREAD-STATE for this thread.  If we ever introduce threads that can
   ;; run on a different kind of VM this slot should be moved to a subclass.
   (state nil :type (or null thread-state))
-  ;; The THREAD that spawned this thread, or NIL if it is detached or a
-  ;; top-level thread.
-  (parent nil :type (or null thread))
   ;; The THREAD-GROUP to which this thread belongs.
   (%group nil :type (or null thread-group))
   ;; NIL if this thread can currently execute, true if it is blocked.  Blocked
@@ -148,6 +198,10 @@
   ;; TODO: Should probably at least warn when overwriting an existing thread
   ;; group?
   (setf (thread-%group thread) new-group))
+
+
+;;; Thread group
+;;; ------------
 
 (defun print-thread-group (group stream depth)
   (declare (ignore depth))
@@ -320,7 +374,7 @@ THREAD-GROUP."))
             (thread-state-stack state))
     (unless (eq *trace-par-t-vm* :short)
       (format *trace-output* "  Code:~15T~:W~%"
-              (thread-state-code state))
+              (thread-code state))
       (format *trace-output* "  Environment:~15T~:W~%"
               (thread-state-env state))
       (format *trace-output* "  Number of Args:~15T~D~%"
@@ -487,6 +541,13 @@ Returns four values:
                (thread-state-stack state)))
        (values t nil nil 'fn))
       
+      (LISP-CALL-0
+       (let* ((stack (thread-state-stack state))
+              (fun (fdefinition (pop stack))))
+         (push (funcall fun) stack)
+         (setf (thread-state-stack state) stack))
+       (values t nil nil 'lisp-call-0))
+      
       (LISP-CALL-1
        (let* ((stack (thread-state-stack state))
               (arg1 (pop stack))
@@ -618,10 +679,10 @@ Returns four values:
   (check-type state thread-state)
   (dotimes (tick ticks (values :time-slice-exhausted nil))
     #+debug-poem-vm
-    (cl:assert (< (thread-state-pc state) (length (thread-state-code state))) ()
+    (cl:assert (< (thread-state-pc state) (length (thread-code state))) ()
                "Program counter out of range.")
     (setf (thread-state-instr state)
-          (elt (thread-state-code state) (thread-state-pc state)))
+          (elt (thread-code state) (thread-state-pc state)))
     #+debug-poem-vm
     (print-trace-information state)
     (incf (thread-state-pc state))

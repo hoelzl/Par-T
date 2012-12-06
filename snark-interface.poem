@@ -110,8 +110,12 @@
 (define (assert . args)
   (lisp-apply 'snark::assert args))
 
+(define tell assert)
+
 (define (assert-rewrite . args)
   (lisp-apply 'snark::assert-rewrite args))
+
+(define tell-rewrite assert-rewrite)
 
 (define (assume . args)
   (lisp-apply 'snark::assume args))
@@ -119,11 +123,31 @@
 (define (prove . args)
   (lisp-apply 'snark::prove args))
 
+(define (ask formula answer-term)
+  (prove formula :answer answer-term)
+  (answer))
+
+(define (new-prove . args)
+  (lisp-apply 'snark::new-prove args))
+
+(define (new-ask formula answer-term)
+  (new-prove formula :answer answer-term)
+  (answer))
+
+(define-macro amb-ask forms
+  `(amb ,@(map (lambda (form)
+		 `(or (new-ask ',(car form) ',(cadr form)) (fail)))
+	       forms)))
+
 (define (sort-name? . args)
   (lisp-apply 'snark::sort-name? args))
 
 (define (snark-closure)
   (lisp-apply 'snark::closure '()))
+
+(define (ask-next)
+  (snark-closure)
+  (answer))
 
 (define $snark-false 'snark-lisp:false)
 

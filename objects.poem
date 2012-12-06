@@ -220,6 +220,8 @@
     (lambda (class) (slot-ref class 'slots)))
 (define class-cpl
     (lambda (class) (slot-ref class 'cpl)))
+(define class-name
+    (lambda (class) (slot-ref class 'name)))
 
 (define generic-methods
     (lambda (generic) (slot-ref generic 'methods)))
@@ -587,14 +589,17 @@
     :direct-slots  (list)))
 
 
-(define <pair>        (make-primitive-class '<pair>))
-(define <null>        (make-primitive-class '<null>))
-(define <symbol>      (make-primitive-class '<symbol>))
-(define <boolean>     (make-primitive-class '<boolean>))
-(define <procedure>   (make-primitive-class '<procedure> <procedure-class>))
-(define <number>      (make-primitive-class '<number>))
-(define <vector>      (make-primitive-class '<vector>))
-(define <char>        (make-primitive-class '<char>))
-(define <string>      (make-primitive-class '<string>))
-(define <input-port>  (make-primitive-class '<input-port>))
-(define <output-port> (make-primitive-class '<output-port>))
+(define <pair>               (make-primitive-class '<pair>))
+(define <null>               (make-primitive-class '<null>))
+(define <symbol>             (make-primitive-class '<symbol>))
+(define <boolean>            (make-primitive-class '<boolean>))
+(define <procedure>          (make-primitive-class '<procedure> <procedure-class>))
+(define <number>             (make-primitive-class '<number>))
+(define <vector>             (make-primitive-class '<vector>))
+(define <char>               (make-primitive-class '<char>))
+(define <string>             (make-primitive-class '<string>))
+(define <input-port>         (make-primitive-class '<input-port>))
+(define <output-port>        (make-primitive-class '<output-port>))
+(define <thread>             (make-primitive-class '<thread>))
+(define <mutex>              (make-primitive-class '<mutex>))
+(define <condition-variable> (make-primitive-class '<condition-variable>))
